@@ -2,12 +2,10 @@ import { ToDoBoardModel } from "./todo.board.model";
 import { BoardController } from "./board.controller";
 import { ICard } from "./trello.interface";
 
-
-
-
-
 const secrets = require("../key.json");
-const model = new ToDoBoardModel("cK9nA9nR")
+const boards = require("../boards.json");
+
+const model = new ToDoBoardModel(boards.todo.id)
 const controller = new BoardController<ToDoBoardModel>(model, { 
     key: secrets.key, 
     token: secrets.token 
