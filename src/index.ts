@@ -47,7 +47,8 @@ controller.isAlive.then(async () => {
         model.lists.inbox.id
     ], model.lists.backlog.id, cardHasDueDate);
 
-    await controller.updateTaskDependencies();
+    await controller.updateTaskDependencies("Tasks");
+    await controller.updatePrepDependencies("Prep");
 });
 
 const cardIsComplete = (card: ICard) => {

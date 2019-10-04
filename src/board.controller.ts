@@ -16,19 +16,24 @@ export class BoardController<T extends BoardModel> {
     }
 
     // TODO: pass in args to determine behavior
-    public async updateTaskDependencies() {
+    public async updateTaskDependencies(checklistName: string) {
         const checklists = this.boardModel.getChecklists();
         for (const checklistId of Object.keys(checklists)) {
-            if (checklists[checklistId].name === "Test") {
+            /** find target checklist */
+            if (checklists[checklistId].name === checklistName) {
+                /** go through items */
                 for (const checklistItem of checklists[checklistId].checkItems) {
+                    /** check if item already has a card */
                     let alreadyExists = false;
                     for (const name of this.boardModel.getAllCardNames()) {
                         if (checklistItem.name.indexOf(name) !== -1) {
                             alreadyExists = true;
                         } 
                     }
-                    if (!alreadyExists && checklistItem.state !== "complete") {
+                    /** if doesn't exist as card, and isn't complete */
+                    if (!alreadyExists && checklistItem.state !== "complete" && checklistItem.name.indexOf("https://") === -1) {
                         const parentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
+                        /** create a new card */
                         const added = await this.addCard({
                             name: checklistItem.name,
                             due: parentCard.due,
@@ -38,6 +43,7 @@ export class BoardController<T extends BoardModel> {
                         /** change name of checklist item to include link */
                         await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
                         const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                            /** prevents multiple URLs from being inserted */
                             name: `${checklistItem.name.split("https://")[0]} ${added.shortUrl}`
                         });
 
@@ -46,7 +52,7 @@ export class BoardController<T extends BoardModel> {
                             name: `parent:${parentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
                             url: parentCard.shortUrl
                         });
-                    }
+                    } 
                 } 
             }
         }
@@ -88,6 +94,10 @@ export class BoardController<T extends BoardModel> {
                 }
             }
         }
+    }
+
+    public async updatePrepDependencies(checklistName: string): Promise<void> {
+
     }
 
     public async moveCardsFromToIf(fromListIds: string[], toListId: string, filter: (card: ICard) => boolean): Promise<void> {
