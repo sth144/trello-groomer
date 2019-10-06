@@ -1,43 +1,6 @@
-export interface ICard {
-    id: string,
-    badges: any,
-    name: string,
-    due: string,
-    dueComplete: boolean,
-    idList: string,
-    idLabels: string[],
-    pos: number,
-    shortUrl: string
-}
-
-export class CheckItem {
-    id: string = "";
-    idChecklist: string = "";
-    name: string = "";
-    state: string = "";
-}
-
-export class Checklist {
-    id: string = "";
-    name: string = "";
-    idCard: string = ""
-    checkItems: CheckItem[] = []
-}
-
-export class List {
-    id: string = "";
-    name: string = "";
-    cards: ICard[] = [];
-    getCardIds(): string[] {
-        return Object.keys(this.cards)
-    }
-    getCardNames(): string[] {
-        return this.getCards().map(x => x.name);
-    }
-    getCards(): ICard[] {
-        return this.cards;
-    }
-}
+import { List } from "../lib/list.interface";
+import { Checklist, CheckItem } from "../lib/checklist.interface";
+import { ICard } from "../lib/card.interface";
 
 export class BoardModel {
     id: string = "";
