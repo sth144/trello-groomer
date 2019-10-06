@@ -30,9 +30,9 @@ export class ToDoBoardModel extends BoardModel {
         done: new List(),
         history: new List()
     };
-    constructor(_id: string) {
+    constructor(id: string) {
         super();
-        this.id = _id;
+        this._id = id;
     }
 }
 
@@ -52,6 +52,21 @@ export const ToDoGroomer = function() {
      *  NOTE: order is important here, do not change order without careful consideration 
      */
     const groom = async () => {
+
+        const start = new Date();
+
+        /** update task and prep dependencies */
+        await controller.updateTaskDependencies("Tasks");
+        await controller.updatePrepDependencies("Prep");
+
+        await controller.assignDueDatesIf(model.lists.day.id, 1, 
+            controller.hasLabelFilterFactory("Recurring"));
+        await controller.assignDueDatesIf(model.lists.week.id, 6, 
+            controller.hasLabelFilterFactory("Recurring"));
+        await controller.assignDueDatesIf(model.lists.month.id, 28, 
+            controller.hasLabelFilterFactory("Recurring"));
+        
+
         /** move completed items to Done */
         await controller.moveCardsFromToIf([
             model.lists.inbox.id,
@@ -71,6 +86,8 @@ export const ToDoGroomer = function() {
         
         /** move cards due this week to Week */
         await controller.moveCardsFromToIf([
+            model.lists.inbox.id,
+            model.lists.backlog.id, 
             model.lists.month.id, 
         ], model.lists.week.id, cardDueThisWeek);
 
@@ -85,9 +102,9 @@ export const ToDoGroomer = function() {
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
 
-        /** update task and prep dependencies */
-        await controller.updateTaskDependencies("Tasks");
-        await controller.updatePrepDependencies("Prep");
+        const runtime = +(new Date()) - +(start);
+
+        console.log(`Sent ${controller.NumRequests} requests in ${runtime}ms`);
     }
 
     /** return the groomer object, exposing the run() method */

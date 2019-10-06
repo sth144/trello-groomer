@@ -2,6 +2,7 @@
 // TODO: Find an easy way to set different due dates
 // TODO: apply date parsing from card title to all cards, not just new task dependency items...
 // TODO: add card to any list, not just inbox
+// TODO: recurring cards with due dates
 
 import { BoardModel } from "../model/board.model";
 import { ICard } from "../lib/card.interface";
@@ -10,7 +11,7 @@ import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
 import * as request from "request";
-import { getNextWeekDay, Weekday } from "../lib/date.utils";
+import { getNextWeekDay, Weekday, getNDaysFromNow } from "../lib/date.utils";
 
 /**
  * RegEx's used to parse date, day, and time info from card titles
@@ -31,6 +32,11 @@ export class BoardController<T extends BoardModel> {
     private isAlive$ = new ReplaySubject<boolean>(1);
     public isAlive = this.isAlive$.pipe(first()).toPromise();
 
+    private numRequestsSent: number = 0;
+    public get NumRequests(): number {
+        return this.numRequestsSent;
+    }
+
     constructor(private boardModel: T, private secrets: { key: string, token: string }) { 
         this.buildModel();
     }
@@ -39,11 +45,22 @@ export class BoardController<T extends BoardModel> {
      * asynchronously adds a card to the board (inbox)
      */
     public async addCard(opts: any): Promise<ICard> {
-        return await this.asyncPost(`/cards?idList=${this.boardModel.lists.inbox.id}`, opts);
+        return await this.asyncPost(`/cards?idList=${(this.boardModel.getLists() as any).inbox.id}`, opts);
     }
 
+    public hasLabelFilterFactory(labelName: string) {
+        const targetLabelId = this.boardModel.getLabels()[labelName];
+    
+        return (card: ICard) => {
+            if (card.idLabels.filter((idLabel) => idLabel === targetLabelId).length > 0)
+                return true;
+            return false;
+        }
+    }
     /**
      * create and modify cards according to task dependency system
+     * TODO: refactor to use map();
+     * TODO: document rules
      */
     public async updateTaskDependencies(checklistName: string) {
         /**
@@ -146,17 +163,67 @@ export class BoardController<T extends BoardModel> {
 
     /**
      * update cards according to prep dependency rules
+     * TODO: document rules
      */
-    public async updatePrepDependencies(checklistName: string): Promise<void> {
+    public async updatePrepDependencies(targetChecklistName: string): Promise<void> {
+        const checklists = this.boardModel.getChecklists();
+        const allCards = this.boardModel.getAllCards();
+        let targetChecklist = null;
+
         /** go through all checklists */
-            /** if checklist matches name */
-                /** fetch all cards list */
-                /** for each item in checklist */
-                    /** if card (prep card) exists with name */
-                        /** insert prep card shortURL into checklist name */
-                        /** provide link to parent card in prep card */
-        /** if card completed, and part of a prep list, check item on prep list */
-        /** if prep checklist item completed, and has card, mark card complete */
+        Object.keys(checklists).map((checklistId) => {
+            /** find target checklist */
+            if (checklists[checklistId].name === targetChecklistName) {
+                targetChecklist = checklists[checklistId];
+                targetChecklist.checkItems.map((checklistItem) => {
+                    allCards.map(async (prepCard) => {
+                        /** if card (prep card) exists with name */
+                        if (checklistItem.name === prepCard.name) {
+                            /** insert prep card shortURL into check item name */
+                            await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
+                            const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                                /** split()[] prevents multiple URLs from being inserted */
+                                name: `${checklistItem.name.split("https://")[0]} ${prepCard.shortUrl}`
+                            });
+
+                            const dependentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
+                            /** provide link to dependent card in prep card */
+                            await this.asyncPost(`/cards/${prepCard.id}/attachments`, {
+                                name: `dependent:${dependentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
+                                url: dependentCard.shortUrl
+                            });
+                        }
+                    });
+                });
+            }
+        });
+                
+        /** go through all cards */
+        if (targetChecklist !== null) {
+            /** if card completed, and part of a prep list, check item on prep list */
+            allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
+                .map(async (card) => {
+                    (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
+                        if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
+                            const parsed: any = { };
+                            const info = attachment.name.split("|");
+                            for (const item of info) {
+                                let split = item.split(":");
+                                if (split.length === 2) {
+                                    Object.assign(parsed, { [split[0]]: split[1] });
+                                };    
+                            }
+                            /** find checklist corresponding dependent to card and mark item complete */
+                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
+                                this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
+                                    + `state=complete`).catch((err) => {
+                                        console.log(err);
+                                    });
+                                }
+                        }
+                    });
+                });
+        }
     }
 
     /**
@@ -185,6 +252,17 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
+    public async assignDueDatesIf(listId: string, dueInDays: number, filter: (card: ICard) => boolean) {
+        const dueDate: Date = getNDaysFromNow(dueInDays);
+
+        this.boardModel.getListById(listId).getCards()
+            .filter((card) => card.due === null)
+            .filter(filter)
+            .map(async (card) => {
+                await this.asyncPut(`/cards/${card.id}?due=${dueDate}`);
+            });
+    }
+
     /**
      * initialize the board model (pull data from Trello)
      */
@@ -197,13 +275,13 @@ export class BoardController<T extends BoardModel> {
             for (const listNameToFetch of this.boardModel.getListNames()) {
                 if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
                     /** create a new list object in memory for each desired list */
-                    Object.assign(this.boardModel.lists[listNameToFetch], { 
+                    Object.assign((this.boardModel.getLists() as any)[listNameToFetch], { 
                         id: responseList.id,
                         name: responseList.name,
                         cards: []
                     });
                     /** fetch cards for list */
-                    this.boardModel.lists[listNameToFetch].cards 
+                    (this.boardModel.getLists() as any)[listNameToFetch].cards 
                         = await this.asyncGet(`/lists/${responseList.id}/cards`);
                     
                 }
@@ -216,8 +294,8 @@ export class BoardController<T extends BoardModel> {
         const checklistsOnBoard = await this.asyncGet(`/boards/${this.boardModel.id}/checklists`);
         for (const responseChecklist of checklistsOnBoard) {
             /** create a new checklist model in memory */
-            this.boardModel.checkLists[responseChecklist.id] = new Checklist();
-            Object.assign(this.boardModel.checkLists[responseChecklist.id], {
+            (this.boardModel.getChecklists() as any)[responseChecklist.id] = new Checklist();
+            Object.assign((this.boardModel.getChecklists() as any)[responseChecklist.id], {
                 id: responseChecklist.id,
                 name: responseChecklist.name,
                 idCard: responseChecklist.idCard,
@@ -231,9 +309,21 @@ export class BoardController<T extends BoardModel> {
                     name: responseCheckItem.name,
                     state: responseCheckItem.state
                 });
-                this.boardModel.checkLists[responseChecklist.id].checkItems.push(newCheckItem);
+                (this.boardModel.getChecklists() as any)[responseChecklist.id].checkItems.push(newCheckItem);
             }
         }
+        
+        /**
+         * get all labels on board
+         */
+        const allLabels = { };
+        (await this.asyncGet(`/boards/${this.boardModel.id}/labels`)).map((label: any) => {
+            if (label.hasOwnProperty("id") && label.hasOwnProperty("name")) {
+                Object.assign(allLabels, { [label.name]: label.id })
+            }
+        });
+        this.boardModel.Labels = allLabels;
+
         this.isAlive$.next(true);
     }
 
@@ -242,6 +332,7 @@ export class BoardController<T extends BoardModel> {
      ********************************************************************************************/
 
     private async asyncGet(url: string): Promise<any> {
+        this.numRequestsSent++;
         return new Promise((resolve, reject) => {
             request({
                 method: "GET",
@@ -253,6 +344,7 @@ export class BoardController<T extends BoardModel> {
     }
 
     private async asyncPut(url: string): Promise<any> {
+        this.numRequestsSent++;
         return new Promise((resolve, reject) => {
             request({
                 method: "PUT",
@@ -264,6 +356,7 @@ export class BoardController<T extends BoardModel> {
     }
 
     private async asyncPost(url: string, opts: any): Promise<any> {
+        this.numRequestsSent++;
         return new Promise((resolve, reject) => {
             let params = "";
             for (let prop of Object.keys(opts)) {
@@ -280,6 +373,7 @@ export class BoardController<T extends BoardModel> {
     }
 
     private async asyncDelete(url: string): Promise<any> {
+        this.numRequestsSent++;
         return new Promise((resolve, reject) => {
             request({
                 method: "DELETE",
@@ -342,7 +436,6 @@ export class BoardController<T extends BoardModel> {
             }
 
             dueDate = getNextWeekDay(dayNum as Weekday).toString();
-
             processedInputStr = inputStr.replace(DayNameRgx, `@${day[1].toUpperCase()}${day.substring(2)}`);
         }
 

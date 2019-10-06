@@ -3,14 +3,23 @@ import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ICard } from "../lib/card.interface";
 
 export class BoardModel {
-    id: string = "";
+    protected _id: string = "";
+    public get id(): string {
+        return this._id;
+    }
     /** lists indexed by name, not id */
-    lists: {    
+    protected lists: {    
         [name: string]: List;
     } = {};
-    checkLists: {
+    protected checkLists: {
         [id: string]: Checklist
     } = {};
+    protected labels: {
+        [name: string]: string
+    } = {};
+    public set Labels(obj: { [name: string]: string }) {
+        this.labels = obj;
+    }
     getAllCards(): ICard[] {
         let allCards: ICard[] = [];
         for (const listName in this.lists) {
@@ -76,5 +85,8 @@ export class BoardModel {
             result = result.concat(checklist.checkItems);
         }
         return result;
+    }
+    getLabels() {
+        return this.labels;
     }
 }

@@ -14,3 +14,9 @@ export function getNextWeekDay(dayOfWeek: Weekday): Date {
     resultDate.setDate(today.getDate() + (7 + dayOfWeek - today.getDay()) % 7);
     return resultDate;
 }
+
+export function getNDaysFromNow(n: number): Date {
+    const date = new Date();
+    date.setDate(date.getDate() + n);
+    return date;
+}
