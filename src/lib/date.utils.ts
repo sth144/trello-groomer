@@ -56,12 +56,15 @@ export const DueDateRegexes = {
  * @param defaultDue this specifies the default due date if none parsed
  * @returns the processed input string, and the due date
  */
-export function parseDueDate(inputStr: string, defaultDue: string): string {
+export function parseDueDate(inputStr: string, defaultDue: string)
+    : { processedInputStr: string, dueDateStr: string } {
     let extractDue;
     let dueDate = defaultDue;
+    let processedInput = inputStr;
 
     if (extractDue = inputStr.match(DueDateRegexes.DateTimeStr)) {
         dueDate = extractDue[0];
+        processedInput = inputStr.replace(DueDateRegexes.DateTimeStr, "");
     } else if (extractDue = inputStr.match(DueDateRegexes.MonthDayTime)) {
         const date = new Date();
         const split = extractDue[0].split("@");
@@ -95,6 +98,9 @@ export function parseDueDate(inputStr: string, defaultDue: string): string {
                 dueDate = date.toString();
             }
         }
+        processedInput = inputStr.replace(DueDateRegexes.MonthDayTime, "");
+        console.log("NOW PROCESSED INPUT ");
+        console.log(processedInput);
     } else if (extractDue = inputStr.match(DueDateRegexes.DayNameTime)) {
         const date = new Date();
         const split = extractDue[0].split("@");
@@ -118,9 +124,13 @@ export function parseDueDate(inputStr: string, defaultDue: string): string {
             date.setHours(hourNum, minutes);
             dueDate = date.toString();
         }
+        processedInput = inputStr.replace(DueDateRegexes.DayNameTime, "");
     }
 
-    return dueDate;
+    return {
+        processedInputStr: processedInput,
+        dueDateStr: dueDate
+    }
 }
 
 export function getMonthNumFromAbbrev(monthAbbrev: string): number {

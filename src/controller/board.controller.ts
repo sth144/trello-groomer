@@ -77,12 +77,12 @@ export class BoardController<T extends BoardModel> {
                     if (!alreadyExists && checklistItem.state !== "complete" && checklistItem.name.indexOf("https://") === -1) {
                         const parentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
 
-                        let parsedDueDate = parseDueDate(checklistItem.name, parentCard.due);
+                        let parsedResult = parseDueDate(checklistItem.name, parentCard.due);
 
                         /** create a new card */
                         const childCard = await this.addCard({
-                            name: checklistItem.name,
-                            due: parsedDueDate,
+                            name: parsedResult.processedInputStr,
+                            due: parsedResult.dueDateStr,
                             idLabels: parentCard.idLabels
                         });                 
                         
@@ -260,9 +260,11 @@ export class BoardController<T extends BoardModel> {
 
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
-            let parsedDue = null;
-            if (card.due === null && (parsedDue = parseDueDate(card.name, null))) {
-                await this.asyncPut(`/cards/${card.id}?due=${parsedDue}`);
+            let parsedResult = parseDueDate(card.name, null), dueDate, parsedName;
+            if (card.due === null 
+                && ((dueDate = parsedResult.dueDateStr) !== null)
+                && ((parsedName = parsedResult.processedInputStr) !== null)) {
+                await this.asyncPut(`/cards/${card.id}?due=${dueDate}&name=${parsedName}`);
             }
         }
     }
