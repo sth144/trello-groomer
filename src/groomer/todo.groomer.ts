@@ -59,13 +59,14 @@ export const ToDoGroomer = function() {
         await controller.updateTaskDependencies("Tasks");
         await controller.updatePrepDependencies("Prep");
 
+        await controller.parseDueDatesFromCardNames();
+
         await controller.assignDueDatesIf(model.lists.day.id, 1, 
             controller.hasLabelFilterFactory("Recurring"));
         await controller.assignDueDatesIf(model.lists.week.id, 6, 
             controller.hasLabelFilterFactory("Recurring"));
         await controller.assignDueDatesIf(model.lists.month.id, 28, 
             controller.hasLabelFilterFactory("Recurring"));
-        
 
         /** move completed items to Done */
         await controller.moveCardsFromToIf([

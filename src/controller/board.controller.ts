@@ -1,3 +1,5 @@
+// TODO: allow non-military times to be entered
+// TODO: simple date times: @${mon}${dayNum}-${time} ie "@Oct3-5:30pm" "@Nov14-3am"
 // TODO: if card in list done, and not marked done, mark done
 // TODO: Find an easy way to set different due dates
 // TODO: apply date parsing from card title to all cards, not just new task dependency items...
@@ -10,16 +12,8 @@ import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
-import * as request from "request";
-import { getNextWeekDay, Weekday, getNDaysFromNow } from "../lib/date.utils";
-
-/**
- * RegEx's used to parse date, day, and time info from card titles
- */
-const DateTimeRgx = new RegExp(/@\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d/);
-const DateRgx = new RegExp(/@\d{4}-[01]\d-[0-3]\d/);
-const DayNameTimeRgx = new RegExp(/@((mon|tues|wed(nes)?|thur(s)?|fri|sat(ur)?|sun)(day)?)T[0-2]\d:[0-5]\d/i);
-const DayNameRgx = new RegExp(/@((mon|tues|wed(nes)?|thur(s)?|fri|sat(ur)?|sun)(day)?)/i)
+import { getNDaysFromNow, parseDueDate } from "../lib/date.utils";
+const request = require("request");
 
 /********************************************************************************************
  * BoardController exposes public methods which allow updating of Trello board. Enables     *
@@ -83,11 +77,11 @@ export class BoardController<T extends BoardModel> {
                     if (!alreadyExists && checklistItem.state !== "complete" && checklistItem.name.indexOf("https://") === -1) {
                         const parentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
 
-                        let [parsedDueDate, childCardName] = this.parseDueDate(checklistItem.name, parentCard.due);
+                        let parsedDueDate = parseDueDate(checklistItem.name, parentCard.due);
 
                         /** create a new card */
                         const childCard = await this.addCard({
-                            name: childCardName,
+                            name: checklistItem.name,
                             due: parsedDueDate,
                             idLabels: parentCard.idLabels
                         });                 
@@ -252,15 +246,25 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
-    public async assignDueDatesIf(listId: string, dueInDays: number, filter: (card: ICard) => boolean) {
+    public async assignDueDatesIf(listId: string, dueInDays: number, conditionFilter: (card: ICard) => boolean)
+        : Promise<void> {
         const dueDate: Date = getNDaysFromNow(dueInDays);
 
         this.boardModel.getListById(listId).getCards()
             .filter((card) => card.due === null)
-            .filter(filter)
+            .filter(conditionFilter)
             .map(async (card) => {
                 await this.asyncPut(`/cards/${card.id}?due=${dueDate}`);
             });
+    }
+
+    public async parseDueDatesFromCardNames(): Promise<void> {
+        for (const card of this.boardModel.getAllCards()) {
+            let parsedDue = null;
+            if (card.due === null && (parsedDue = parseDueDate(card.name, null))) {
+                await this.asyncPut(`/cards/${card.id}?due=${parsedDue}`);
+            }
+        }
     }
 
     /**
@@ -397,50 +401,7 @@ export class BoardController<T extends BoardModel> {
         return `https://api.trello.com/1${path}${end}`;
     }
 
-    // TODO: apply this to all cards, not just new task dependency items...
 
-    /**
-     * parses a string (card or checklist item name) for a date, time, day, etc.
-     * @param inputStr name to parse
-     * @param defaultDue this specifies the default due date if none parsed 
-     */
-    private parseDueDate(inputStr: string, defaultDue: string): string[] {
-        let extractDue;
-        let dueDate = defaultDue;
-        let processedInputStr = inputStr
-
-        if (extractDue = inputStr.match(DateTimeRgx)) {
-            dueDate = extractDue[0];
-            processedInputStr = inputStr.replace(DateTimeRgx, "");
-        } else if (extractDue = inputStr.match(DateRgx)) {
-            dueDate = `${extractDue[0]}T17:00`;
-            processedInputStr = inputStr.replace(DateTimeRgx, "");
-        } else if (extractDue = inputStr.match(DayNameTimeRgx)) {
-            
-            
-            // TODO: parse day and time
-
-
-        } else if (extractDue = inputStr.match(DayNameRgx)) {
-            let day: string = extractDue[0].toLowerCase();
-            const dayLowerCase = day.toLowerCase();
-            /** first character will be @ */
-            const dayCamelCase = `${dayLowerCase[1].toUpperCase()}${dayLowerCase.substring(2)}` as unknown;
-
-            const WeekdayKeys = Object.keys(Weekday);
-            let dayNum: number;
-            for (let i = 0; i < WeekdayKeys.length; i++) {
-                if (dayCamelCase === WeekdayKeys[i]) {
-                    dayNum = i;
-                }
-            }
-
-            dueDate = getNextWeekDay(dayNum as Weekday).toString();
-            processedInputStr = inputStr.replace(DayNameRgx, `@${day[1].toUpperCase()}${day.substring(2)}`);
-        }
-
-        return [dueDate, processedInputStr];
-    }
 }
 
 

@@ -38,3 +38,10 @@ export const cardHasDueDate = (card: ICard) => {
     if (card.due === null || card.due === undefined) return false;
     return true;
 }
+
+export const Not = (filter: (aCard: ICard) => boolean) => {
+    return (card: ICard) => {
+        const oppositeOfResult = filter(card);
+        return !oppositeOfResult;
+    }
+}
