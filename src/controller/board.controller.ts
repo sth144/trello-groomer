@@ -5,6 +5,7 @@
 // TODO: apply date parsing from card title to all cards, not just new task dependency items...
 // TODO: add card to any list, not just inbox
 // TODO: recurring cards with due dates
+// TODO: documentation card in Trello board
 
 import { BoardModel } from "../model/board.model";
 import { ICard } from "../lib/card.interface";
