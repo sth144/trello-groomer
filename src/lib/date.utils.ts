@@ -43,9 +43,13 @@ export const DueDateRegexes = {
     /** date and time (hours and minutes), ex. 1941-12-07T14:00 */
     DateTimeStr: new RegExp(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d/),
     /** ex. Feb3@16:20 */
-    MonthDayTime: new RegExp(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[0-9]{1,2}(@[0-9]{1,2}(:[0-9]{1,2})*)?/),
+    MonthDayTime: new RegExp(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[0-9]{1,2}(@[0-9]{1,2}(:[0-9]{1,2})?)/),
+    /** ex. Feb3@4:20pm */
+    MonthDayTimeNonMil: new RegExp(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[0-9]{1,2}(@[0-9]{1,2}(:[0-9]{1,2})?)(a|A|p|P)(m|M)/),
     /** day name and time, ex. Mon@13:30 */
     DayNameTime: new RegExp(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)@[0-9]{1,2}(:[0-9]{1,2})?/),
+    /** day name and time non-military, ex. Mon@1:30pm */
+    DayNameTimeNonMil: new RegExp(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)@[0-9]{1,2}(:[0-9]{1,2})?(a|A|p|P)(m|M)/)
 }
 
 // TODO: apply this to all cards, not just new task dependency items...
@@ -61,6 +65,10 @@ export function parseDueDate(inputStr: string, defaultDue: string)
     let extractDue;
     let dueDate = defaultDue;
     let processedInput = inputStr;
+
+    /** check for non-military times */
+    // TODO:
+
 
     if (extractDue = inputStr.match(DueDateRegexes.DateTimeStr)) {
         dueDate = extractDue[0];
@@ -99,8 +107,6 @@ export function parseDueDate(inputStr: string, defaultDue: string)
             }
         }
         processedInput = inputStr.replace(DueDateRegexes.MonthDayTime, "");
-        console.log("NOW PROCESSED INPUT ");
-        console.log(processedInput);
     } else if (extractDue = inputStr.match(DueDateRegexes.DayNameTime)) {
         const date = new Date();
         const split = extractDue[0].split("@");
@@ -155,3 +161,20 @@ export function getWeekDayNumFromAbbrev(weekdayNameAbbrev: string): number {
     return null;
 }
 
+export function conventionalToMilitaryTime(conventionalTime: string): string {
+    const findDomainRgx = /(a|p|A|P)(m|M)/;
+    const parseDomain = conventionalTime.match(findDomainRgx);
+    let domain;
+    if (parseDomain !== null && parseDomain.length > 0 && parseDomain[0] !== null) {
+        domain = parseDomain[0];
+    } else domain = "pm";
+    conventionalTime = conventionalTime.replace(findDomainRgx, "");
+    const split = conventionalTime.split(":");
+    let hours = (domain === "PM" || domain === "pm") ? 12 : 0;  
+    hours += parseInt(split[0]);
+    let minutes = 0;
+    if (split.length > 0) {
+        minutes = parseInt(split[1]);
+    }
+    return `${hours}:${minutes}`
+}
