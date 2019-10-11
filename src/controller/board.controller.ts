@@ -1,9 +1,5 @@
-// TODO: allow non-military times to be entered
-// TODO: simple date times: @${mon}${dayNum}-${time} ie "@Oct3-5:30pm" "@Nov14-3am"
 // TODO: if card in list done, and not marked done, mark done
-// TODO: Find an easy way to set different due dates
-// TODO: apply date parsing from card title to all cards, not just new task dependency items...
-// TODO: add card to any list, not just inbox
+// TODO: add card from checklist to any list, not just inbox
 // TODO: recurring cards with due dates
 // TODO: documentation card in Trello board
 
@@ -259,6 +255,15 @@ export class BoardController<T extends BoardModel> {
             });
     }
 
+    public async markCardsInListDone(listId: string): Promise<void> {
+        this.boardModel.getListById(listId).getCards()
+            .filter((card) => card.due !== null)
+            .filter((card) => card.dueComplete === false)
+            .map(async (card) => {
+                await this.asyncPut(`/cards/${card.id}?dueComplete=true`);
+            });
+    }
+
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
             let parsedResult = parseDueDate(card.name, null), dueDate, parsedName;
@@ -277,7 +282,8 @@ export class BoardController<T extends BoardModel> {
         /** 
          * get all lists on board, map to lists specified on BoardModel 
          */
-        const listsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`);
+        const listsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
+
         for (const responseList of listsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
                 if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
@@ -299,6 +305,7 @@ export class BoardController<T extends BoardModel> {
          * get all checklists on board
          */
         const checklistsOnBoard = await this.asyncGet(`/boards/${this.boardModel.id}/checklists`);
+
         for (const responseChecklist of checklistsOnBoard) {
             /** create a new checklist model in memory */
             (this.boardModel.getChecklists() as any)[responseChecklist.id] = new Checklist();
@@ -330,7 +337,7 @@ export class BoardController<T extends BoardModel> {
             }
         });
         this.boardModel.Labels = allLabels;
-
+        
         this.isAlive$.next(true);
     }
 

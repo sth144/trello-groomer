@@ -40,8 +40,13 @@ export class ToDoBoardModel extends BoardModel {
  * Factory which returns a groomer object, whose run() method will groom the Trello board
  */
 export const ToDoGroomer = function() {
+    console.log("Building model");
+
     /** instantiate private data members, board model and controller */
     const model = new ToDoBoardModel(boards.todo.id)
+
+    console.log("Initializing controller");
+    
     const controller = new BoardController<ToDoBoardModel>(model, { 
         key: secrets.key, 
         token: secrets.token
@@ -55,6 +60,8 @@ export const ToDoGroomer = function() {
 
         const start = new Date();
 
+        console.log("Updating task dependencies");
+
         /** update task and prep dependencies */
         await controller.updateTaskDependencies("Tasks");
         await controller.updatePrepDependencies("Prep");
@@ -67,6 +74,8 @@ export const ToDoGroomer = function() {
             controller.hasLabelFilterFactory("Recurring"));
         await controller.assignDueDatesIf(model.lists.month.id, 28, 
             controller.hasLabelFilterFactory("Recurring"));
+
+        console.log("Updating list placements");
 
         /** move completed items to Done */
         await controller.moveCardsFromToIf([
@@ -102,6 +111,10 @@ export const ToDoGroomer = function() {
         await controller.moveCardsFromToIf([
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
+
+        console.log("Marking appropriate items done");
+
+        await controller.markCardsInListDone(model.lists.done.id);
 
         const runtime = +(new Date()) - +(start);
 
