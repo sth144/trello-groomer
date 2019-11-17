@@ -133,23 +133,6 @@ export class BoardController<T extends BoardModel> {
                 }
             }
         }
-
-        /** 
-         * if checklist item completed, and has card, complete card 
-         */
-        for (const checklistItem of this.boardModel.getAllChecklistItems()) {
-            if (checklistItem.state === "complete") {
-                /** check that name includes link to card */
-                const splitCheckItemName = checklistItem.name.split(" https://");
-                if (splitCheckItemName.length > 1) {
-                    for (const card of this.boardModel.getAllCards()) {
-                        if (checklistItem.name.indexOf(card.shortUrl) !== -1) {
-                            await this.asyncPut(`/cards/${card.id}?dueComplete=true`)
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -217,6 +200,98 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
+    public async updateFollowupDependencies(targetChecklistName: string): Promise<void> {
+        console.log("UPDATE FOLLOWUP");
+        const checklists = this.boardModel.getChecklists();
+        const allCards = this.boardModel.getAllCards();
+        let targetChecklist = null;
+
+        /** go through all checklists and find target*/
+        Object.keys(checklists).filter((checklistId) => checklists[checklistId].name === targetChecklistName)
+            .forEach((checklistId) => {
+                console.log("CHECKLIST FOUND");
+                targetChecklist = checklists[checklistId];
+                targetChecklist.checkItems.forEach(async (checklistItem: CheckItem) => {
+                    /** if doesn't exist as card, and isn't complete */
+                    if (checklistItem.state !== "complete" && !(allCards.some(x => x.name.indexOf(checklistItem.name) !== -1))
+                        && checklistItem.name.indexOf("https://") === -1) {
+
+                        const parentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
+
+                        let parsedResult = parseDueDate(checklistItem.name, parentCard.due);
+
+                        /** create a new card */
+                        const childCard = await this.addCard({
+                            name: parsedResult.processedInputStr,
+                            due: parsedResult.dueDateStr,
+                            idLabels: parentCard.idLabels
+                        });                 
+
+                        /** change name of checklist item to include link */
+                        await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
+                        const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                            /** prevents multiple URLs from being inserted */
+                            name: `${checklistItem.name.split("https://")[0]} ${childCard.shortUrl}`
+                        });
+
+                        /** link added card to parent @1 */
+                        await this.asyncPost(`/cards/${childCard.id}/attachments`, {
+                            name: `parent:${parentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
+                            url: parentCard.shortUrl
+                        });
+                    }
+                    
+                });
+            });
+                
+        /** go through all cards */
+        if (targetChecklist !== null) {
+            /** if card completed, and part of a followup list, check item on followup list */
+            allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
+                .map(async (card) => {
+                    (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
+                        if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
+                            const parsed: any = { };
+                            const info = attachment.name.split("|");
+                            for (const item of info) {
+                                let split = item.split(":");
+                                if (split.length === 2) {
+                                    Object.assign(parsed, { [split[0]]: split[1] });
+                                };    
+                            }
+                            /** find checklist corresponding dependent to card and mark item complete */
+                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
+                                this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
+                                    + `state=complete`).catch((err) => {
+                                        console.log(err);
+                                    });
+                                }
+                        }
+                    });
+                });
+        }
+
+    }
+
+    public async markCardsDoneIfLinkedCheckItemsDone() {
+        /** 
+         * if checklist item completed, and has card, complete card 
+         */
+        for (const checklistItem of this.boardModel.getAllChecklistItems()) {
+            if (checklistItem.state === "complete") {
+                /** check that name includes link to card */
+                const splitCheckItemName = checklistItem.name.split(" https://");
+                if (splitCheckItemName.length > 1) {
+                    for (const card of this.boardModel.getAllCards()) {
+                        if (checklistItem.name.indexOf(card.shortUrl) !== -1) {
+                            await this.asyncPut(`/cards/${card.id}?dueComplete=true`)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * move all cards from list to list if pass filter
      * @param fromListIds source list
@@ -279,6 +354,8 @@ export class BoardController<T extends BoardModel> {
      * initialize the board model (pull data from Trello)
      */
     private async buildModel(): Promise<void> {
+        console.log("Building model");
+        console.log("Retrieving lists");
         /** 
          * get all lists on board, map to lists specified on BoardModel 
          */
@@ -301,6 +378,7 @@ export class BoardController<T extends BoardModel> {
             }
         };
 
+        console.log("Retrieving checklists")
         /**
          * get all checklists on board
          */
@@ -327,6 +405,7 @@ export class BoardController<T extends BoardModel> {
             }
         }
         
+        console.log("Retrieving labels");
         /**
          * get all labels on board
          */

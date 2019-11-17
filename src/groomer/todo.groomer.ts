@@ -57,15 +57,21 @@ export const ToDoGroomer = function() {
      *  NOTE: order is important here, do not change order without careful consideration 
      */
     const groom = async () => {
+        console.log("Grooming");
 
         const start = new Date();
 
         console.log("Updating task dependencies");
 
-        /** update task and prep dependencies */
+        /**
+         * groom checklists 
+         *  - update task and prep dependencies, generate followups 
+         */
         await controller.updateTaskDependencies("Tasks");
         await controller.updatePrepDependencies("Prep");
+        await controller.updateFollowupDependencies("Followup");
 
+        await controller.markCardsDoneIfLinkedCheckItemsDone();
         await controller.parseDueDatesFromCardNames();
 
         await controller.assignDueDatesIf(model.lists.day.id, 1, 
