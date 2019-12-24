@@ -2,7 +2,7 @@ import { BoardModel } from "../model/board.model";
 import { List } from "../lib/list.interface";
 import { BoardController } from "../controller/board.controller";
 import { 
-    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate 
+    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays 
 } from "../lib/card.filters";
 const secrets = require("../../key.json");
 const boards = require("../../boards.json");
@@ -18,17 +18,17 @@ export class ToDoBoardModel extends BoardModel {
         backlog: List;
         month: List;
         week: List;
+        tomorrow: List;
         day: List;
         done: List;
-        history: List
     } = {
         inbox: new List(),
         backlog: new List(),
         month: new List(),
         week: new List(),
+        tomorrow: new List(),
         day: new List(),
         done: new List(),
-        history: new List()
     };
     constructor(id: string) {
         super();
@@ -88,7 +88,8 @@ export const ToDoGroomer = function() {
             model.lists.inbox.id,
             model.lists.backlog.id, 
             model.lists.month.id, 
-            model.lists.week.id,    
+            model.lists.week.id,
+            model.lists.tomorrow.id,
             model.lists.day.id 
         ], model.lists.done.id, cardIsComplete);
 
@@ -97,8 +98,17 @@ export const ToDoGroomer = function() {
             model.lists.inbox.id,
             model.lists.backlog.id, 
             model.lists.month.id, 
-            model.lists.week.id,    
+            model.lists.week.id,
+            model.lists.tomorrow.id,
         ], model.lists.day.id, cardDueToday);
+
+        /** move cards due tomorrow (or day after) to Tomorrow */
+        await controller.moveCardsFromToIf([
+            model.lists.inbox.id,
+            model.lists.backlog.id, 
+            model.lists.month.id, 
+            model.lists.week.id,
+        ], model.lists.tomorrow.id, cardDueWithinThreeDays);
         
         /** move cards due this week to Week */
         await controller.moveCardsFromToIf([
@@ -117,6 +127,8 @@ export const ToDoGroomer = function() {
         await controller.moveCardsFromToIf([
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
+
+        /** TODO: prune month histories of repeat-labeled cards */
 
         console.log("Marking appropriate items done");
 

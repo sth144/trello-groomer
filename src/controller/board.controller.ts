@@ -201,7 +201,6 @@ export class BoardController<T extends BoardModel> {
     }
 
     public async updateFollowupDependencies(targetChecklistName: string): Promise<void> {
-        console.log("UPDATE FOLLOWUP");
         const checklists = this.boardModel.getChecklists();
         const allCards = this.boardModel.getAllCards();
         let targetChecklist = null;
@@ -209,7 +208,6 @@ export class BoardController<T extends BoardModel> {
         /** go through all checklists and find target*/
         Object.keys(checklists).filter((checklistId) => checklists[checklistId].name === targetChecklistName)
             .forEach((checklistId) => {
-                console.log("CHECKLIST FOUND");
                 targetChecklist = checklists[checklistId];
                 targetChecklist.checkItems.forEach(async (checklistItem: CheckItem) => {
                     /** if doesn't exist as card, and isn't complete */

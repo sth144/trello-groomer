@@ -17,6 +17,16 @@ export const cardDueToday = (card: ICard) => {
     } return false;
 }
 
+export const cardDueWithinThreeDays = (card: ICard) => {
+    if (cardHasDueDate(card)) {
+        const dueDate = new Date(card.due);
+        const today = new Date();
+        const dayAfterTomorrow = new Date();
+        dayAfterTomorrow.setDate(today.getDate()+2);
+        return (+dueDate < +dayAfterTomorrow); 
+    } return false;
+}
+
 export const cardDueThisWeek = (card: ICard) => {
     if (cardHasDueDate(card)) {
         const dueDate = new Date(card.due);
