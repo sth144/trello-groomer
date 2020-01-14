@@ -125,9 +125,11 @@ export class BoardController<T extends BoardModel> {
                             Object.assign(parsed, { [prop]: val });
                         }
                         /** find checklist corresponding to card and mark item complete */
-                        if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
-                            this.asyncPut(
-                                `/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?`
+                        if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")
+                            && this.boardModel.getAllChecklistItems().filter((x) => {
+                                x.id === parsed["checkItemId"] && x.state !== "complete"
+                            }).length > 0) {
+                            this.asyncPut(`/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?`
                                + `state=complete`).catch((err) => {
                                    console.log(err);
                                });
@@ -191,7 +193,10 @@ export class BoardController<T extends BoardModel> {
                                 };
                             }
                             /** find checklist corresponding dependent to card and mark item complete */
-                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
+                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")
+                                && this.boardModel.getAllChecklistItems().filter((x) => {
+                                    x.id === parsed["checkItemId"] && x.state !== "complete"
+                                }).length > 0) {
                                 this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
                                     + `state=complete`).catch((err) => {
                                         console.log(err);
@@ -261,7 +266,10 @@ export class BoardController<T extends BoardModel> {
                                 };
                             }
                             /** find checklist corresponding dependent to card and mark item complete */
-                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
+                            if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")
+                                && this.boardModel.getAllChecklistItems().filter((x) => {
+                                    x.id === parsed["checkItemId"] && x.state !== "complete"
+                                }).length > 0) {
                                 this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
                                     + `state=complete`).catch((err) => {
                                         console.log(err);
@@ -418,7 +426,7 @@ export class BoardController<T extends BoardModel> {
                     name: responseCheckItem.name,
                     state: responseCheckItem.state
                 });
-                (this.boardModel.getChecklists() as any)[responseChecklist.id].checkItems.push(newCheckItem);
+                (this.boardModel.getChecklists())[responseChecklist.id].checkItems.push(newCheckItem);
             }
         }
 
