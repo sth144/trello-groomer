@@ -39,7 +39,7 @@ export function getNDaysFromNow(n: number): Date {
 /**
  * RegEx's used to parse date, day, and time info from card titles
  */
-export const DueDateRegexes = {
+export const DateRegexes = {
     /** date and time (hours and minutes), ex. 1941-12-07T14:00 */
     DateTimeStr: new RegExp(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d/),
     /** ex. Feb3@16:20 */
@@ -48,6 +48,8 @@ export const DueDateRegexes = {
     TimeNonMil: new RegExp(/[0-9]{1,2}(:[0-9]{1,2})?(a|A|p|P)(m|M)/),
     /** day name and time, ex. Mon@13:30 */
     DayNameTime: new RegExp(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)@[0-9]{1,2}(:[0-9]{1,2})?((a|A|p|P)(m|M))?/),
+    /** ex. January 2020 */
+    MonthYear: new RegExp(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec){1}[a-z]{0,6} [0-9]{4}/)
 }
 
 /**
@@ -62,15 +64,15 @@ export function parseDueDate(inputStr: string, defaultDue: string)
     let dueDate = defaultDue;
     let processedInput = inputStr;
 
-    if (extractDue = inputStr.match(DueDateRegexes.DateTimeStr)) {
+    if (extractDue = inputStr.match(DateRegexes.DateTimeStr)) {
         dueDate = extractDue[0];
-        processedInput = inputStr.replace(DueDateRegexes.DateTimeStr, "");
+        processedInput = inputStr.replace(DateRegexes.DateTimeStr, "");
     } else {
-        if (extractDue = inputStr.match(DueDateRegexes.MonthDayTime)) {
+        if (extractDue = inputStr.match(DateRegexes.MonthDayTime)) {
             const date = new Date();
             const split = extractDue[0].split("@");
             const dayStr = split[0];
-    
+
             let extractMonth = dayStr.match(/([A-Z]*|[a-z]*)*/);
             if (extractMonth !== null && extractMonth.length > 0 && extractMonth[0] !== null) {
                 const monthAbbrev = extractMonth[0];
@@ -85,7 +87,7 @@ export function parseDueDate(inputStr: string, defaultDue: string)
                     if (split.length > 1) {
                         let timeStr = split[1];
                         /** check for non-military times */
-                        if (extractTime = timeStr.match(DueDateRegexes.TimeNonMil)) {
+                        if (extractTime = timeStr.match(DateRegexes.TimeNonMil)) {
                             timeStr = conventionalToMilitaryTime(extractTime[0]);
                             processedInput = processedInput.replace(extractTime[0], "")
                             processedInput = processedInput.replace(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)@/, "");
@@ -106,8 +108,8 @@ export function parseDueDate(inputStr: string, defaultDue: string)
                     dueDate = date.toString();
                 }
             }
-            processedInput = inputStr.replace(DueDateRegexes.MonthDayTime, "");
-        } else if (extractDue = inputStr.match(DueDateRegexes.DayNameTime)) {
+            processedInput = inputStr.replace(DateRegexes.MonthDayTime, "");
+        } else if (extractDue = inputStr.match(DateRegexes.DayNameTime)) {
             console.log(extractDue);
             const date = new Date();
             const split = extractDue[0].split("@");
@@ -124,7 +126,7 @@ export function parseDueDate(inputStr: string, defaultDue: string)
                 if (split.length > 1) {
                     let timeStr = split[1];
                     /** check for non-military times */
-                    if (extractTime = timeStr.match(DueDateRegexes.TimeNonMil)) {
+                    if (extractTime = timeStr.match(DateRegexes.TimeNonMil)) {
                         timeStr = conventionalToMilitaryTime(extractTime[0]);
                         processedInput = processedInput.replace(extractTime[0], "")
                         processedInput = processedInput.replace(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)@/, "");
@@ -138,7 +140,7 @@ export function parseDueDate(inputStr: string, defaultDue: string)
                 date.setHours(hourNum, minutes);
                 dueDate = date.toString();
             }
-            processedInput = inputStr.replace(DueDateRegexes.DayNameTime, "");
+            processedInput = inputStr.replace(DateRegexes.DayNameTime, "");
         }
     }
 
@@ -179,7 +181,7 @@ export function conventionalToMilitaryTime(conventionalTime: string): string {
     } else domain = "pm";
     conventionalTime = conventionalTime.replace(findDomainRgx, "");
     const split = conventionalTime.split(":");
-    let hours = (domain === "PM" || domain === "pm") ? 12 : 0;  
+    let hours = (domain === "PM" || domain === "pm") ? 12 : 0;
     hours += parseInt(split[0]);
     let minutes = 0;
     if (split.length > 1) {

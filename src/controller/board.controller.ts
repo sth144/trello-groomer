@@ -9,7 +9,7 @@ import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
-import { getNDaysFromNow, parseDueDate } from "../lib/date.utils";
+import { getNDaysFromNow, parseDueDate, DateRegexes } from '../lib/date.utils';
 const request = require("request");
 
 /********************************************************************************************
@@ -28,7 +28,7 @@ export class BoardController<T extends BoardModel> {
         return this.numRequestsSent;
     }
 
-    constructor(private boardModel: T, private secrets: { key: string, token: string }) { 
+    constructor(private boardModel: T, private secrets: { key: string, token: string }) {
         this.buildModel();
     }
 
@@ -41,7 +41,7 @@ export class BoardController<T extends BoardModel> {
 
     public hasLabelFilterFactory(labelName: string) {
         const targetLabelId = this.boardModel.getLabels()[labelName];
-    
+
         return (card: ICard) => {
             if (card.idLabels.filter((idLabel) => idLabel === targetLabelId).length > 0)
                 return true;
@@ -68,12 +68,15 @@ export class BoardController<T extends BoardModel> {
                     for (const name of this.boardModel.getAllCardNames()) {
                         if (checklistItem.name.indexOf(name) !== -1) {
                             alreadyExists = true;
-                        } 
+                        }
                     }
-                    /** if doesn't exist as card, and isn't complete */
-                    if (!alreadyExists && checklistItem.state !== "complete" && checklistItem.name.indexOf("https://") === -1) {
-                        const parentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
 
+                    let parentCard;
+
+                    /** if doesn't exist as card, and isn't complete */
+                    if (!alreadyExists && checklistItem.state !== "complete" && checklistItem.name.indexOf("https://") === -1
+                        /** get reference to parent card, abort if undefined */
+                        && ((parentCard = this.boardModel.getCardById(checklists[checklistId].idCard)) !== undefined)) {
                         let parsedResult = parseDueDate(checklistItem.name, parentCard.due);
 
                         /** create a new card */
@@ -81,8 +84,8 @@ export class BoardController<T extends BoardModel> {
                             name: parsedResult.processedInputStr,
                             due: parsedResult.dueDateStr,
                             idLabels: parentCard.idLabels
-                        });                 
-                        
+                        });
+
                         /** change name of checklist item to include link */
                         await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
                         const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
@@ -95,13 +98,13 @@ export class BoardController<T extends BoardModel> {
                             name: `parent:${parentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
                             url: parentCard.shortUrl
                         });
-                    } 
-                } 
+                    }
+                }
             }
         }
 
-        /** 
-         * if card completed, and part of checklist, check on checklist 
+        /**
+         * if card completed, and part of checklist, check on checklist
          */
         for (const card of this.boardModel.getAllCards()) {
             /** ensure card is not complete and has attachments */
@@ -171,7 +174,7 @@ export class BoardController<T extends BoardModel> {
                 });
             }
         });
-                
+
         /** go through all cards */
         if (targetChecklist !== null) {
             /** if card completed, and part of a prep list, check item on prep list */
@@ -185,7 +188,7 @@ export class BoardController<T extends BoardModel> {
                                 let split = item.split(":");
                                 if (split.length === 2) {
                                     Object.assign(parsed, { [split[0]]: split[1] });
-                                };    
+                                };
                             }
                             /** find checklist corresponding dependent to card and mark item complete */
                             if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
@@ -223,7 +226,7 @@ export class BoardController<T extends BoardModel> {
                             name: parsedResult.processedInputStr,
                             due: parsedResult.dueDateStr,
                             idLabels: parentCard.idLabels
-                        });                 
+                        });
 
                         /** change name of checklist item to include link */
                         await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
@@ -238,10 +241,10 @@ export class BoardController<T extends BoardModel> {
                             url: parentCard.shortUrl
                         });
                     }
-                    
+
                 });
             });
-                
+
         /** go through all cards */
         if (targetChecklist !== null) {
             /** if card completed, and part of a followup list, check item on followup list */
@@ -255,7 +258,7 @@ export class BoardController<T extends BoardModel> {
                                 let split = item.split(":");
                                 if (split.length === 2) {
                                     Object.assign(parsed, { [split[0]]: split[1] });
-                                };    
+                                };
                             }
                             /** find checklist corresponding dependent to card and mark item complete */
                             if (parsed.hasOwnProperty("checklistId") && parsed.hasOwnProperty("checkItemId")) {
@@ -272,8 +275,8 @@ export class BoardController<T extends BoardModel> {
     }
 
     public async markCardsDoneIfLinkedCheckItemsDone() {
-        /** 
-         * if checklist item completed, and has card, complete card 
+        /**
+         * if checklist item completed, and has card, complete card
          */
         for (const checklistItem of this.boardModel.getAllChecklistItems()) {
             if (checklistItem.state === "complete") {
@@ -281,8 +284,11 @@ export class BoardController<T extends BoardModel> {
                 const splitCheckItemName = checklistItem.name.split(" https://");
                 if (splitCheckItemName.length > 1) {
                     for (const card of this.boardModel.getAllCards()) {
-                        if (checklistItem.name.indexOf(card.shortUrl) !== -1) {
-                            await this.asyncPut(`/cards/${card.id}?dueComplete=true`)
+                        if (checklistItem.name.indexOf(card.shortUrl) !== -1 && !card.dueComplete) {
+                            console.log("CARD DONE FROM CHECKLIST ");
+                            console.log(card.name);
+                            await this.asyncPut(`/cards/${card.id}?dueComplete=true`);
+                            console.log("PUT DONE");
                         }
                     }
                 }
@@ -304,6 +310,7 @@ export class BoardController<T extends BoardModel> {
             for (const card of fromListCards) {
                 if (filter(card)) {
 
+                    console.log("MOVE CARD TO LIST " + card.name + " " + fromListId + " " + toListId);
                     // TODO: this should be encapsulated in a moveCard operation
                     await this.asyncPut(`/cards/${card.id}?idList=${toListId}&pos=top`);
 
@@ -340,7 +347,7 @@ export class BoardController<T extends BoardModel> {
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
             let parsedResult = parseDueDate(card.name, null), dueDate, parsedName;
-            if (card.due === null 
+            if (card.due === null
                 && ((dueDate = parsedResult.dueDateStr) !== null)
                 && ((parsedName = parsedResult.processedInputStr) !== null)) {
                 await this.asyncPut(`/cards/${card.id}?due=${dueDate}&name=${parsedName}`);
@@ -352,31 +359,43 @@ export class BoardController<T extends BoardModel> {
      * initialize the board model (pull data from Trello)
      */
     private async buildModel(): Promise<void> {
-        console.log("Building model");
         console.log("Retrieving lists");
-        /** 
-         * get all lists on board, map to lists specified on BoardModel 
+        /**
+         * get all lists on board, map to lists specified on BoardModel
          */
         const listsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
+        const modelListsHandle = this.boardModel.getLists() as any;
 
         for (const responseList of listsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
                 if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
                     /** create a new list object in memory for each desired list */
-                    Object.assign((this.boardModel.getLists() as any)[listNameToFetch], { 
+                    Object.assign(modelListsHandle[listNameToFetch], {
                         id: responseList.id,
                         name: responseList.name,
                         cards: []
                     });
                     /** fetch cards for list */
-                    (this.boardModel.getLists() as any)[listNameToFetch].cards 
+                    (modelListsHandle)[listNameToFetch].cards
                         = await this.asyncGet(`/lists/${responseList.id}/cards`);
-                    
                 }
+            }
+
+            if (responseList.name.match(DateRegexes.MonthYear) && !modelListsHandle.hasOwnProperty(responseList.name)) {
+                /** create a new list object in memory for each desired list */
+                Object.assign(modelListsHandle, {
+                    [responseList.name]: Object.assign(new List(), {
+                        id: responseList.id,
+                        name: responseList.name,
+                        cards: []
+                    })
+                });
+                /** fetch cards for list */
+                (modelListsHandle)[responseList.name].cards
+                    = await this.asyncGet(`/lists/${responseList.id}/cards`);
             }
         };
 
-        console.log("Retrieving checklists")
         /**
          * get all checklists on board
          */
@@ -402,7 +421,7 @@ export class BoardController<T extends BoardModel> {
                 (this.boardModel.getChecklists() as any)[responseChecklist.id].checkItems.push(newCheckItem);
             }
         }
-        
+
         console.log("Retrieving labels");
         /**
          * get all labels on board
@@ -414,7 +433,7 @@ export class BoardController<T extends BoardModel> {
             }
         });
         this.boardModel.Labels = allLabels;
-        
+
         this.isAlive$.next(true);
     }
 
@@ -424,6 +443,9 @@ export class BoardController<T extends BoardModel> {
 
     private async asyncGet(url: string): Promise<any> {
         this.numRequestsSent++;
+
+        console.log("GET " + url);
+
         return new Promise((resolve, reject) => {
             request({
                 method: "GET",
@@ -436,6 +458,9 @@ export class BoardController<T extends BoardModel> {
 
     private async asyncPut(url: string): Promise<any> {
         this.numRequestsSent++;
+
+        console.log("PUT " + url);
+
         return new Promise((resolve, reject) => {
             request({
                 method: "PUT",
@@ -448,6 +473,9 @@ export class BoardController<T extends BoardModel> {
 
     private async asyncPost(url: string, opts: any): Promise<any> {
         this.numRequestsSent++;
+
+        console.log("POST " + url);
+
         return new Promise((resolve, reject) => {
             let params = "";
             for (let prop of Object.keys(opts)) {
@@ -465,6 +493,9 @@ export class BoardController<T extends BoardModel> {
 
     private async asyncDelete(url: string): Promise<any> {
         this.numRequestsSent++;
+
+        console.log("DELETE " + url);
+
         return new Promise((resolve, reject) => {
             request({
                 method: "DELETE",
@@ -490,5 +521,3 @@ export class BoardController<T extends BoardModel> {
 
 
 }
-
-
