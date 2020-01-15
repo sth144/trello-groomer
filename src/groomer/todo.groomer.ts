@@ -4,6 +4,7 @@ import { BoardController } from "../controller/board.controller";
 import {
     cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays
 } from "../lib/card.filters";
+import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 const secrets = require("../../key.json");
 const boards = require("../../boards.json");
 
@@ -54,6 +55,8 @@ export const ToDoGroomer = function() {
         token: secrets.token
     });
 
+
+
     /**
      * groom the board
      *  NOTE: order is important here, do not change order without careful consideration
@@ -61,7 +64,24 @@ export const ToDoGroomer = function() {
     const groom = async () => {
         console.log("Grooming");
 
+        console.log("Adding history lists from past 12 months");
+        /**
+         * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
+         *  - this should probably be factored out into groomer, this is not good generalized behavior
+         */
         const start = new Date();
+        const yearnum = start.getFullYear();
+        const monthnum = start.getMonth();
+        const historyLists = await controller.addListsToModelIfNameMeetsConditions([(x: List) => {
+            return x.name.match(DateRegexes.MonthYear) !== null;
+        }, (x: List) => {        
+            /** if list in current calendar year */
+            return  (x.name.indexOf(yearnum.toString()) !== -1)
+                /** or list in last calendar year, but within last 12 months */
+                || (x.name.indexOf((yearnum - 1).toString()) !== -1 
+                    && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
+        }]);
+
 
         console.log("Updating task dependencies");
 
@@ -69,9 +89,9 @@ export const ToDoGroomer = function() {
          * groom checklists
          *  - update task and prep dependencies, generate followups
          */
-        await controller.updateTaskDependencies("Tasks");
-        await controller.updatePrepDependencies("Prep");
-        await controller.updateFollowupDependencies("Followup");
+        await controller.updateTaskDependencies("Tasks", /** ignore (necessary?) */ historyLists);
+        await controller.updatePrepDependencies("Prep", /** ignore (necessary?) */ historyLists);
+        await controller.updateFollowupDependencies("Followup", /** ignore (necessary?) */ historyLists);
 
         await controller.markCardsDoneIfLinkedCheckItemsDone();
         await controller.parseDueDatesFromCardNames();
@@ -130,11 +150,16 @@ export const ToDoGroomer = function() {
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
 
-        /** TODO: prune month histories of repeat-labeled cards */
-
         console.log("Marking appropriate items done");
 
         await controller.markCardsInListDone(model.lists.done.id);
+
+        console.log("Pruning repeat-labeled cards from history lists")
+
+        historyLists.forEach(async (historyList) => {
+            await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
+        });
+
 
         const runtime = +(new Date()) - +(start);
 

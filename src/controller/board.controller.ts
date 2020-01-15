@@ -9,7 +9,7 @@ import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
-import { getNDaysFromNow, parseDueDate, DateRegexes } from '../lib/date.utils';
+import { getNDaysFromNow, parseDueDate } from '../lib/date.utils';
 const request = require("request");
 
 /********************************************************************************************
@@ -28,15 +28,18 @@ export class BoardController<T extends BoardModel> {
         return this.numRequestsSent;
     }
 
+    private allListsOnBoard: List[] = [];
+
     constructor(private boardModel: T, private secrets: { key: string, token: string }) {
         this.buildModel();
     }
 
     /**
      * asynchronously adds a card to the board (inbox)
+     * TODO: don't rely on / assume existence of inbox list...
      */
-    public async addCard(opts: any): Promise<ICard> {
-        return await this.asyncPost(`/cards?idList=${(this.boardModel.getLists() as any).inbox.id}`, opts);
+    public async addCard(opts: any, toListId: string = (this.boardModel.getLists() as any).inbox.id): Promise<ICard> {
+        return await this.asyncPost(`/cards?idList=${toListId}`, opts);
     }
 
     public hasLabelFilterFactory(labelName: string) {
@@ -53,7 +56,7 @@ export class BoardController<T extends BoardModel> {
      * TODO: refactor to use map();
      * TODO: document rules
      */
-    public async updateTaskDependencies(checklistName: string) {
+    public async updateTaskDependencies(checklistName: string, ignoreLists: List[] = []) {
         /**
          * create cards for items in checklists named "checklistName"
          */
@@ -106,7 +109,7 @@ export class BoardController<T extends BoardModel> {
         /**
          * if card completed, and part of checklist, check on checklist
          */
-        for (const card of this.boardModel.getAllCards()) {
+        for (const card of this.boardModel.getAllCards().filter((x) => !ignoreLists.some(l => l.id === x.idList))) {
             /** ensure card is not complete and has attachments */
             if (card.dueComplete && card.badges.attachments > 0) {
                 /** fetch attachments */
@@ -144,7 +147,7 @@ export class BoardController<T extends BoardModel> {
      * update cards according to prep dependency rules
      * TODO: document rules
      */
-    public async updatePrepDependencies(targetChecklistName: string): Promise<void> {
+    public async updatePrepDependencies(targetChecklistName: string, ignoreLists: List[] = []): Promise<void> {
         const checklists = this.boardModel.getChecklists();
         const allCards = this.boardModel.getAllCards();
         let targetChecklist = null;
@@ -181,6 +184,7 @@ export class BoardController<T extends BoardModel> {
         if (targetChecklist !== null) {
             /** if card completed, and part of a prep list, check item on prep list */
             allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
+                .filter(card => !ignoreLists.some(l => l.id === card.idList))
                 .map(async (card) => {
                     (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
                         if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
@@ -208,7 +212,7 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
-    public async updateFollowupDependencies(targetChecklistName: string): Promise<void> {
+    public async updateFollowupDependencies(targetChecklistName: string, ignoreLists: List[] = []): Promise<void> {
         const checklists = this.boardModel.getChecklists();
         const allCards = this.boardModel.getAllCards();
         let targetChecklist = null;
@@ -254,6 +258,7 @@ export class BoardController<T extends BoardModel> {
         if (targetChecklist !== null) {
             /** if card completed, and part of a followup list, check item on followup list */
             allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
+                .filter(card => !ignoreLists.some(l => l.id === card.idList))
                 .map(async (card) => {
                     (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
                         if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
@@ -292,11 +297,8 @@ export class BoardController<T extends BoardModel> {
                 const splitCheckItemName = checklistItem.name.split(" https://");
                 if (splitCheckItemName.length > 1) {
                     for (const card of this.boardModel.getAllCards()) {
-                        if (checklistItem.name.indexOf(card.shortUrl) !== -1 && !card.dueComplete) {
-                            console.log("CARD DONE FROM CHECKLIST ");
-                            console.log(card.name);
+                        if (!card.dueComplete && checklistItem.name.indexOf(card.shortUrl) !== -1) {
                             await this.asyncPut(`/cards/${card.id}?dueComplete=true`);
-                            console.log("PUT DONE");
                         }
                     }
                 }
@@ -317,8 +319,6 @@ export class BoardController<T extends BoardModel> {
             const fromListCards = from.getCards();
             for (const card of fromListCards) {
                 if (filter(card)) {
-
-                    console.log("MOVE CARD TO LIST " + card.name + " " + fromListId + " " + toListId);
                     // TODO: this should be encapsulated in a moveCard operation
                     await this.asyncPut(`/cards/${card.id}?idList=${toListId}&pos=top`);
 
@@ -352,6 +352,14 @@ export class BoardController<T extends BoardModel> {
             });
     }
 
+    public async deleteCardsInListIfLabeled(listId: string, labelName: string): Promise<void> {
+        this.boardModel.getListById(listId).cards.filter((card: any) => {
+            return card.labels.some((l: any) => l.name === labelName);
+        }).forEach(async (cardWithLabel) => {
+            await this.asyncDelete(`/cards/${cardWithLabel.id}`);
+        });
+    }
+
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
             let parsedResult = parseDueDate(card.name, null), dueDate, parsedName;
@@ -371,10 +379,10 @@ export class BoardController<T extends BoardModel> {
         /**
          * get all lists on board, map to lists specified on BoardModel
          */
-        const listsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
+        this.allListsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
         const modelListsHandle = this.boardModel.getLists() as any;
 
-        for (const responseList of listsOnBoard) {
+        for (const responseList of this.allListsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
                 if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
                     /** create a new list object in memory for each desired list */
@@ -387,20 +395,6 @@ export class BoardController<T extends BoardModel> {
                     (modelListsHandle)[listNameToFetch].cards
                         = await this.asyncGet(`/lists/${responseList.id}/cards`);
                 }
-            }
-
-            if (responseList.name.match(DateRegexes.MonthYear) && !modelListsHandle.hasOwnProperty(responseList.name)) {
-                /** create a new list object in memory for each desired list */
-                Object.assign(modelListsHandle, {
-                    [responseList.name]: Object.assign(new List(), {
-                        id: responseList.id,
-                        name: responseList.name,
-                        cards: []
-                    })
-                });
-                /** fetch cards for list */
-                (modelListsHandle)[responseList.name].cards
-                    = await this.asyncGet(`/lists/${responseList.id}/cards`);
             }
         };
 
@@ -443,6 +437,37 @@ export class BoardController<T extends BoardModel> {
         this.boardModel.Labels = allLabels;
 
         this.isAlive$.next(true);
+    }
+
+    public async addListsToModelIfNameMeetsConditions(conditions: ((a: any) => boolean)[]): Promise<List[]> {
+        const result = [];
+
+        const modelListsHandle: any = this.boardModel.getLists();
+        for (const responseList of this.allListsOnBoard) {
+            let qualifies = true;
+            for (const condition of conditions) {
+                if (!condition(responseList)) {
+                    qualifies = false  
+                } 
+            }
+            if (qualifies && !modelListsHandle.hasOwnProperty(responseList.name)) {
+                /** create a new list object in memory for each desired list */
+                const newList = new List();
+                Object.assign(modelListsHandle, {
+                    [responseList.name]: Object.assign(newList, {
+                        id: responseList.id,
+                        name: responseList.name,
+                        cards: []
+                    })
+                });
+                /** fetch cards for list */
+                (modelListsHandle)[responseList.name].cards
+                    = await this.asyncGet(`/lists/${responseList.id}/cards`);
+                result.push(newList);
+            }
+        }
+
+        return result;
     }
 
     /********************************************************************************************
