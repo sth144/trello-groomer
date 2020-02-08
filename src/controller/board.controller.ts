@@ -28,6 +28,10 @@ export class BoardController<T extends BoardModel> {
         return this.numRequestsSent;
     }
 
+    public get AllLabelNames() {
+        return Object.keys(this.boardModel.getLabels());
+    }
+
     private allListsOnBoard: List[] = [];
 
     constructor(private boardModel: T, private secrets: { key: string, token: string }) {
@@ -112,10 +116,13 @@ export class BoardController<T extends BoardModel> {
         for (const card of this.boardModel.getAllCards().filter((x) => !ignoreLists.some(l => l.id === x.idList))) {
             /** ensure card is not complete and has attachments */
             if (card.dueComplete && card.badges.attachments > 0) {
-                /** fetch attachments */
-                const attachments = await this.asyncGet(`/cards/${card.id}/attachments`);
+                /** 
+                 * previously fetched attachments here, no longer necessary as attachments retrieved with
+                 *  initial GET request
+                 */
+
                 /** for each attachment */
-                for (const attachment of attachments) {
+                for (const attachment of card.attachments) {
                     /** if attachment has substring "parent" (meaning it is a subtask) */
                     if (attachment.name.indexOf("parent") !== -1) {
                         /** split by delimiter "|" (see @1 above) and parse */
@@ -186,7 +193,7 @@ export class BoardController<T extends BoardModel> {
             allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
                 .filter(card => !ignoreLists.some(l => l.id === card.idList))
                 .map(async (card) => {
-                    (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
+                    card.attachments.map((attachment: any) => {
                         if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
                             const parsed: any = { };
                             const info = attachment.name.split("|");
@@ -260,7 +267,7 @@ export class BoardController<T extends BoardModel> {
             allCards.filter((card) => (card.dueComplete && card.badges.attachments > 0))
                 .filter(card => !ignoreLists.some(l => l.id === card.idList))
                 .map(async (card) => {
-                    (await this.asyncGet(`/cards/${card.id}/attachments`)).map((attachment: any) => {
+                    card.attachments.map((attachment: any) => {
                         if (attachment.name !== undefined && attachment.name.indexOf("dependent") !== -1) {
                             const parsed: any = { };
                             const info = attachment.name.split("|");
@@ -343,6 +350,28 @@ export class BoardController<T extends BoardModel> {
             });
     }
 
+    public async addLabelToCardsInListIfTitleContains(labelName: string, checkFor: string[]): Promise<void>  {
+        checkFor = checkFor.map(x => x.toLowerCase());
+
+        const allLabels = this.boardModel.getLabels();
+        if (allLabels.hasOwnProperty(labelName) && allLabels[labelName].length > 0) {
+
+            const labelId = this.boardModel.getLabels()[labelName];
+
+            this.boardModel.getAllCards().forEach(async (card) => {
+                const cardNameLowerCase = card.name.toLowerCase();
+                
+                if (checkFor.some(x => cardNameLowerCase.indexOf(x) !== -1)
+                && card.idLabels.indexOf(labelId) === -1) {
+                    await this.asyncPost(`/cards/${card.id}/idLabels?`, {
+                        value: labelId
+                    });
+                    card.idLabels.push(labelId);
+                }
+            });
+        }
+    }
+
     public async markCardsInListDone(listId: string): Promise<void> {
         this.boardModel.getListById(listId).getCards()
             .filter((card) => card.due !== null)
@@ -357,6 +386,105 @@ export class BoardController<T extends BoardModel> {
             return card.labels.some((l: any) => l.name === labelName);
         }).forEach(async (cardWithLabel) => {
             await this.asyncDelete(`/cards/${cardWithLabel.id}`);
+        });
+    }
+
+    public async autoLinkRelatedCards(ignorePatterns: string[]): Promise<void> {
+        const allCards = this.boardModel.getAllCards();
+
+        const labelAssociations: { [labelId: string]: ICard[] } = { };
+
+        /** create a data structure mapping labels to cards with those label IDs */
+        allCards.forEach((card) => {
+            for (let labelId of card.idLabels) {
+                if (!labelAssociations.hasOwnProperty(labelId)) {
+                    Object.assign(labelAssociations, {
+                        [labelId]: []
+                    });
+                }
+                labelAssociations[labelId].push(card);
+            }
+        });
+
+        const maxLinksAdded = 100;
+        let totalLinksAdded = 0;
+
+        Object.keys(labelAssociations).forEach(async (key) => {
+            for (let cardA of labelAssociations[key]) {
+                const potentialLinksForCardA: ICard[] = [];
+                for (let cardB of labelAssociations[key].filter(x => x.name !== cardA.name)) {
+                    /** compute common words with length > 3 */
+                    const wordsInCommon: string[] = [];
+                    const [wordsA, wordsB] = [cardA.name, cardB.name].map(
+                        y => y.split(" ")
+                            .map(x => x.toLowerCase())
+                            .filter(x => x.length > 3)
+                            .filter(x => ignorePatterns.indexOf(x) === -1)
+                    );
+                    
+                    wordsA.forEach((wordA) => {
+                        wordsB.forEach((wordB) => {
+                            if (wordA === wordB && wordsInCommon.indexOf(wordA) === -1) {
+                                wordsInCommon.push(wordA);
+                            }
+                        });
+                    });
+
+                    if (wordsInCommon.length > 0) {
+                        potentialLinksForCardA.push(cardB);
+                    }
+                }
+
+                const maxTrelloAttachments = 10;
+                const numPreExistingTrelloAttachments = cardA.badges.attachmentsByType.trello.card;
+                /** 
+                 * if for each card for which titles share a common word > 3 characters
+                 */
+                if (potentialLinksForCardA.length > 0 && numPreExistingTrelloAttachments < maxTrelloAttachments) {
+                    const numAttachmentsCanAdd = maxTrelloAttachments - numPreExistingTrelloAttachments;
+
+                    /** sort linksNeeded by date (will link most recently updated cards if limited) */
+                    potentialLinksForCardA.sort((a: ICard, b: ICard) => {
+                        if (a.dateLastActivity === b.dateLastActivity) return 0;
+                        const dateA = new Date(a.dateLastActivity), dateB = new Date(b.dateLastActivity);
+                        if (+dateA > +dateB) return -1;
+                        return 1;
+                    });
+
+                    let numAddedThisCard = 0;
+
+                    const linksToAdd: ICard[] = [];
+
+                    /** generate linksToAdd list synchronously in order to obey constraints */
+                    potentialLinksForCardA.forEach((cardToLink: ICard) => {
+                        /** if cards not already linked */
+                        if (!cardA.attachments.some((x: unknown): boolean => {
+                            return (x as { url: string }).url.indexOf(cardToLink.shortUrl) !== -1;
+                        })) {
+                            /** link cards (up to 10 trello attachments) */
+                            if (numAddedThisCard < numAttachmentsCanAdd && totalLinksAdded < maxLinksAdded 
+                                && !cardA.actions.some((a: any) => {
+                                    /** do not re-link a card which has already been linked and removed */
+                                    return cardToLink.shortUrl.indexOf( a.data.attachment.name ) !== -1
+                                })) {
+                                linksToAdd.push(cardToLink);
+
+                                numAddedThisCard++;
+                                /** increment badge value on card to affect iterations for other labels */
+                                cardA.badges.attachmentsByType.trello.card++;
+                                totalLinksAdded++;
+                            }
+                        }
+                    });
+
+                    /** post links asynchronously */
+                    linksToAdd.forEach(async (cardToLink: ICard) => {
+                        await this.asyncPost(`/cards/${cardA.id}/attachments`, {
+                            url: cardToLink.shortUrl
+                        });
+                    });
+                }
+            }
         });
     }
 
@@ -393,7 +521,7 @@ export class BoardController<T extends BoardModel> {
                     });
                     /** fetch cards for list */
                     (modelListsHandle)[listNameToFetch].cards
-                        = await this.asyncGet(`/lists/${responseList.id}/cards`);
+                        = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard`);
                 }
             }
         };
@@ -462,7 +590,7 @@ export class BoardController<T extends BoardModel> {
                 });
                 /** fetch cards for list */
                 (modelListsHandle)[responseList.name].cards
-                    = await this.asyncGet(`/lists/${responseList.id}/cards`);
+                    = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard`);
                 result.push(newList);
             }
         }
@@ -554,3 +682,4 @@ export class BoardController<T extends BoardModel> {
 
 
 }
+

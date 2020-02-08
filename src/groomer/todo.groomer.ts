@@ -2,11 +2,12 @@ import { BoardModel } from "../model/board.model";
 import { List } from "../lib/list.interface";
 import { BoardController } from "../controller/board.controller";
 import {
-    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays
+    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays, Not
 } from "../lib/card.filters";
-import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
-const secrets = require("../../key.json");
-const boards = require("../../boards.json");
+import { DateRegexes, getMonthNumFromAbbrev, getRemnDaysInWeek, getRemnDaysInMonth } from "../lib/date.utils";
+import { join } from "path";
+const secrets = require("../../config/key.json");
+const boards = require("../../config/boards.json");
 
 /*************************************************************************************************
  * This file defines the shape of the ToDo board model, and implements the grooming behavior for *
@@ -55,8 +56,6 @@ export const ToDoGroomer = function() {
         token: secrets.token
     });
 
-
-
     /**
      * groom the board
      *  NOTE: order is important here, do not change order without careful consideration
@@ -64,13 +63,13 @@ export const ToDoGroomer = function() {
     const groom = async () => {
         console.log("Grooming");
 
-        console.log("Adding history lists from past 12 months");
+        console.log("Adding history lists from past 12 months to data model");
         /**
          * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
          *  - this should probably be factored out into groomer, this is not good generalized behavior
          */
         const start = new Date();
-        const yearnum = start.getFullYear();
+        const yearnum = start.getFullYear() ;
         const monthnum = start.getMonth();
         const historyLists = await controller.addListsToModelIfNameMeetsConditions([(x: List) => {
             return x.name.match(DateRegexes.MonthYear) !== null;
@@ -82,6 +81,24 @@ export const ToDoGroomer = function() {
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
 
+        /** auto-label cards based on titles */
+        console.log("Adding labels according to keywords in card titles");
+        
+        controller.AllLabelNames
+            /** work keyword conflicts with a lot of irrelevant card titles */
+            .filter(x => x !== "Work")
+            .forEach(async (labelName) => {
+                await controller.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
+            });
+
+        // TODO: populate these lists
+        // TODO: enable RegExp?
+        
+        const autoLabelConfig = require(join(__dirname, "../../config/auto-label.config.json"));
+
+        Object.keys(autoLabelConfig).forEach(async (labelName) => {
+            await controller.addLabelToCardsInListIfTitleContains(labelName, autoLabelConfig[labelName]);
+        });
 
         console.log("Updating task dependencies");
 
@@ -96,12 +113,21 @@ export const ToDoGroomer = function() {
         await controller.markCardsDoneIfLinkedCheckItemsDone();
         await controller.parseDueDatesFromCardNames();
 
-        await controller.assignDueDatesIf(model.lists.day.id, 1,
-            controller.hasLabelFilterFactory("Recurring"));
-        await controller.assignDueDatesIf(model.lists.week.id, 6,
-            controller.hasLabelFilterFactory("Recurring"));
-        await controller.assignDueDatesIf(model.lists.month.id, 28,
-            controller.hasLabelFilterFactory("Recurring"));
+        /** assign due dates to cards without due dates */
+        await controller.assignDueDatesIf(model.lists.day.id, 1, 
+            Not(cardHasDueDate));
+        await controller.assignDueDatesIf(model.lists.tomorrow.id, 2, 
+            Not(cardHasDueDate));
+        await controller.assignDueDatesIf(model.lists.week.id, getRemnDaysInWeek(),
+            Not(cardHasDueDate)); 
+        /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
+        await controller.assignDueDatesIf(model.lists.month.id, Math.floor(getRemnDaysInMonth() / 2),
+            Not(cardHasDueDate));
+
+        /** auto-link cards which share a label and a common word (>= 3 letters) in title */
+        await controller.autoLinkRelatedCards(
+            require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
+        );
 
         console.log("Updating list placements");
 

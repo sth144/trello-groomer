@@ -36,6 +36,20 @@ export function getNDaysFromNow(n: number): Date {
     return date;
 }
 
+export function getRemnDaysInWeek(): number {
+    let date = new Date();
+    const endOfWeek = getNextWeekDay(Weekday.Sunday);
+    return (+endOfWeek - +date) / (1000 * 60 * 60 * 24);
+}
+
+export function getRemnDaysInMonth(): number {
+    let date = new Date();
+    let time = new Date(date.getTime());
+    time.setMonth(date.getMonth() + 1);
+    time.setDate(0);
+    return time.getDate() > date.getDate() ? time.getDate() - date.getDate() : 0;
+}
+
 /**
  * RegEx's used to parse date, day, and time info from card titles
  */

@@ -1,4 +1,8 @@
-key.json
-boards.json
+config/*.config.json
+config/boards.json
+config/key.json
 node_modules
 dist
+deploy.sh
+.env
+.dockerignore
