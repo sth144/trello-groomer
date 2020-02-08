@@ -90,9 +90,6 @@ export const ToDoGroomer = function() {
             .forEach(async (labelName) => {
                 await controller.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
             });
-
-        // TODO: populate these lists
-        // TODO: enable RegExp?
         
         const autoLabelConfig = require(join(__dirname, "../../config/auto-label.config.json"));
 

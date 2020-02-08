@@ -1,6 +1,3 @@
-// TODO: if card in list done, and not marked done, mark done
-// TODO: add card from checklist to any list, not just inbox
-// TODO: recurring cards with due dates
 // TODO: documentation card in Trello board
 
 import { BoardModel } from "../model/board.model";
@@ -40,9 +37,12 @@ export class BoardController<T extends BoardModel> {
 
     /**
      * asynchronously adds a card to the board (inbox)
-     * TODO: don't rely on / assume existence of inbox list...
      */
-    public async addCard(opts: any, toListId: string = (this.boardModel.getLists() as any).inbox.id): Promise<ICard> {
+    public async addCard(opts: any, 
+        toListId: string = (this.boardModel.getLists().hasOwnProperty("inbox")) ? 
+            /* don't rely on / assume existence of inbox list... */
+            (this.boardModel.getLists() as { inbox: { id: string } }).inbox.id : undefined)
+        : Promise<ICard> {
         return await this.asyncPost(`/cards?idList=${toListId}`, opts);
     }
 
@@ -57,8 +57,9 @@ export class BoardController<T extends BoardModel> {
     }
     /**
      * create and modify cards according to task dependency system
-     * TODO: refactor to use map();
-     * TODO: document rules
+     *  - if a card is marked done, and exists in a checklist in another card, mark the checklist item on that other
+     *      card done
+     *  - if a checklist item is marked done, and that checklist item is linked to a card, mark that card done
      */
     public async updateTaskDependencies(checklistName: string, ignoreLists: List[] = []) {
         /**
