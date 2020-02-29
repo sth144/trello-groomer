@@ -1,8 +1,13 @@
 config/*.config.json
 config/boards.json
 config/key.json
+config/result.json
+config/templates
 node_modules
 dist
 deploy.sh
 .env
 .dockerignore
+cache/*
+!cache/.gitignore
+.vscode

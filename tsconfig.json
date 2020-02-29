@@ -6,20 +6,24 @@
         "strictNullChecks": false,
         "noImplicitThis": false,
         "resolveJsonModule": true,
+        "module": "commonjs",
         "moduleResolution": "node",
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
-        "types": ["node"],
+        "types": ["node", "mocha"],
         "typeRoots": [ "node_modules/@types" ],
         "rootDirs": ["src"],
         "baseUrl": "src",
         "outDir": "dist",
-        "paths": { },
+        "paths": { 
+            "@base/*": ["./*"]
+         },
         "lib": [
-          "es2017",
-          "dom"
+            "es6",
+            "es2017",
+            "dom"
         ],
         "allowJs": true
     },

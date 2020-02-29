@@ -1,12 +1,20 @@
 // TODO: documentation card in Trello board
 
 import { BoardModel } from "../model/board.model";
-import { ICard } from "../lib/card.interface";
+import { ICard, IAction } from "../lib/card.interface";
 import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
 import { getNDaysFromNow, parseDueDate } from '../lib/date.utils';
+import { inspect } from "util";
+import { writeFileSync, existsSync } from "fs";
+import { 
+    removePropsByDotPath, detectRemovals, ConfigObj, 
+    syncObjectsWithPreference, updateLiteralsByDotPath,
+    detectLiteralChanges
+} from "../lib/object.utils";
+import { join } from "path";
 const request = require("request");
 
 /********************************************************************************************
@@ -140,10 +148,8 @@ export class BoardController<T extends BoardModel> {
                             && this.boardModel.getAllChecklistItems().filter((x) => {
                                 x.id === parsed["checkItemId"] && x.state !== "complete"
                             }).length > 0) {
-                            this.asyncPut(`/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?`
-                               + `state=complete`).catch((err) => {
-                                   console.log(err);
-                               });
+                            this.asyncPut(`/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?state=complete`)
+                                .catch((err) => { console.log(err); });
                         }
                     }
                 }
@@ -343,12 +349,16 @@ export class BoardController<T extends BoardModel> {
         : Promise<void> {
         const dueDate: Date = getNDaysFromNow(dueInDays);
 
+        const batch: Promise<any>[] = [];
         this.boardModel.getListById(listId).getCards()
-            .filter((card) => card.due === null)
             .filter(conditionFilter)
-            .map(async (card) => {
-                await this.asyncPut(`/cards/${card.id}?due=${dueDate}`);
+            .map((card) => {
+                console.log(`Assigning due date to ${card.name}: ${dueDate}`);
+                batch.push(this.asyncPut(`/cards/${card.id}?due=${dueDate}`));
+                card.due = dueDate.toUTCString();
             });
+
+        await Promise.all(batch);
     }
 
     public async addLabelToCardsInListIfTitleContains(labelName: string, checkFor: string[]): Promise<void>  {
@@ -465,9 +475,11 @@ export class BoardController<T extends BoardModel> {
                             /** link cards (up to 10 trello attachments) */
                             if (numAddedThisCard < numAttachmentsCanAdd && totalLinksAdded < maxLinksAdded 
                                 && !cardA.actions.some((a: any) => {
-                                    /** do not re-link a card which has already been linked and removed */
-                                    return cardToLink.shortUrl.indexOf( a.data.attachment.name ) !== -1
-                                })) {
+                                    if (a.data.hasOwnProperty("attachment")) {
+                                        /** do not re-link a card which has already been linked and removed */
+                                        return cardToLink.shortUrl.indexOf( a.data.attachment.name ) !== -1;
+                                    } return false;
+                                }) && !cardToLink.dueComplete) {
                                 linksToAdd.push(cardToLink);
 
                                 numAddedThisCard++;
@@ -500,11 +512,51 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
+    public async syncConfigJsonWithCard(jsonFileName: string, cardName: string) {
+        const targetConfigSyncCard = this.boardModel.getCardByName(cardName);
+        const configPath = join(process.cwd(), "config", jsonFileName);
+        const loadedConfig = require(configPath);
+
+        /** validate */
+        if ([targetConfigSyncCard, loadedConfig].some(x => {
+            return (x === undefined || typeof x !== "object")
+        })) {
+            return;
+        }
+
+        const updateFromCard: ConfigObj = JSON.parse(targetConfigSyncCard.desc);
+
+        const prevConfigUpdatePath = join(process.cwd(), "cache/", `old.${jsonFileName}`);
+        let prevConfigUpdate = { };
+
+        /** check cached previous configs to check for removals */
+        if (existsSync(prevConfigUpdatePath)) 
+            prevConfigUpdate = require(prevConfigUpdatePath);
+
+        /** if literal updated in config file, and not in card, overwrite card value */
+        updateLiteralsByDotPath(updateFromCard, 
+            detectLiteralChanges(loadedConfig as ConfigObj, prevConfigUpdate as ConfigObj));
+
+        removePropsByDotPath(loadedConfig, detectRemovals(updateFromCard, prevConfigUpdate));
+        removePropsByDotPath(updateFromCard, detectRemovals(loadedConfig, prevConfigUpdate));
+        
+        const configUpdate = syncObjectsWithPreference(updateFromCard, loadedConfig);
+
+        await this.asyncPut(`/cards/${targetConfigSyncCard.id}?desc=${JSON.stringify(configUpdate, null, 4)}`)
+        
+        // TODO: cache these with redis?
+
+        /** cache update from merged objects to enable detection of deletions on next pass */
+        writeFileSync(prevConfigUpdatePath, JSON.stringify(configUpdate));
+        writeFileSync(configPath, JSON.stringify(configUpdate, null, 4));
+    }
+
     /**
      * initialize the board model (pull data from Trello)
      */
     private async buildModel(): Promise<void> {
         console.log("Retrieving lists");
+        // TODO: can these requests be batched?
         /**
          * get all lists on board, map to lists specified on BoardModel
          */
@@ -522,7 +574,7 @@ export class BoardController<T extends BoardModel> {
                     });
                     /** fetch cards for list */
                     (modelListsHandle)[listNameToFetch].cards
-                        = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard`);
+                        = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
                 }
             }
         };
@@ -565,6 +617,21 @@ export class BoardController<T extends BoardModel> {
         });
         this.boardModel.Labels = allLabels;
 
+
+
+
+
+
+        
+
+        writeFileSync(join(process.cwd(), "config/result.json"), JSON.stringify(this.boardModel, null, 4));
+
+
+
+
+
+
+
         this.isAlive$.next(true);
     }
 
@@ -591,11 +658,12 @@ export class BoardController<T extends BoardModel> {
                 });
                 /** fetch cards for list */
                 (modelListsHandle)[responseList.name].cards
-                    = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard`);
+                    = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
                 result.push(newList);
             }
         }
 
+        
         return result;
     }
 
@@ -606,7 +674,7 @@ export class BoardController<T extends BoardModel> {
     private async asyncGet(url: string): Promise<any> {
         this.numRequestsSent++;
 
-        console.log("GET " + url);
+        console.log(`GET ${url}`);
 
         return new Promise((resolve, reject) => {
             request({
@@ -621,7 +689,8 @@ export class BoardController<T extends BoardModel> {
     private async asyncPut(url: string): Promise<any> {
         this.numRequestsSent++;
 
-        console.log("PUT " + url);
+        const printUrl = url.replace("\n", "").replace("\t", "").replace("\r", "");
+        console.log(`PUT ${printUrl}`);
 
         return new Promise((resolve, reject) => {
             request({
@@ -636,7 +705,7 @@ export class BoardController<T extends BoardModel> {
     private async asyncPost(url: string, opts: any): Promise<any> {
         this.numRequestsSent++;
 
-        console.log("POST " + url);
+        console.log(`POST ${url}`);
 
         return new Promise((resolve, reject) => {
             let params = "";
@@ -656,7 +725,7 @@ export class BoardController<T extends BoardModel> {
     private async asyncDelete(url: string): Promise<any> {
         this.numRequestsSent++;
 
-        console.log("DELETE " + url);
+        console.log(`DELETE ${url}`);
 
         return new Promise((resolve, reject) => {
             request({

@@ -50,6 +50,15 @@ export function getRemnDaysInMonth(): number {
     return time.getDate() > date.getDate() ? time.getDate() - date.getDate() : 0;
 }
 
+export function getRemnDaysInYear(): number {
+    const beginNextYear = new Date((new Date().getFullYear())+1, 0, 1);
+    return diffBtwnDatesInDays(new Date(), beginNextYear)
+}
+
+export function diffBtwnDatesInDays(firstDate: Date, secondDate: Date) {
+    return Math.round(((+secondDate)-(+firstDate))/(1000*60*60*24));
+}
+
 /**
  * RegEx's used to parse date, day, and time info from card titles
  */

@@ -2,6 +2,7 @@ export interface ICard {
     id: string,
     badges: any,
     name: string,
+    desc: string,
     due: string,
     dueComplete: boolean,
     dateLastActivity: string,
@@ -10,5 +11,11 @@ export interface ICard {
     pos: number,
     shortUrl: string,
     attachments: { name: string }[],
-    actions: { type: string }[]
+    actions: IAction[]
 };
+
+export interface IAction {
+    type: string,
+    data: Record<string, Record<string, unknown> | string | number>,
+    date: string
+}

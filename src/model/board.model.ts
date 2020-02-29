@@ -43,6 +43,15 @@ export class BoardModel {
             }
         }
     }
+    getCardByName(name: string): ICard {
+        for (const list of this.getListsAsArray()) {
+            for (const card of list.cards) {
+                if (card.name === name) {
+                    return card;
+                }
+            }
+        }
+    }
     getListById(id: string): List {
         for (const list of this.getListsAsArray()) {
             if (list.id === id) {

@@ -2,10 +2,12 @@ import { BoardModel } from "../model/board.model";
 import { List } from "../lib/list.interface";
 import { BoardController } from "../controller/board.controller";
 import {
-    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays, Not
+    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays, Not, wasMovedFromToListFilterFactory
 } from "../lib/card.filters";
-import { DateRegexes, getMonthNumFromAbbrev, getRemnDaysInWeek, getRemnDaysInMonth } from "../lib/date.utils";
+import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
+import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
+import { existsSync } from "fs";
 const secrets = require("../../config/key.json");
 const boards = require("../../config/boards.json");
 
@@ -23,6 +25,7 @@ export class ToDoBoardModel extends BoardModel {
         tomorrow: List;
         day: List;
         done: List;
+        pinned: List;
     } = {
         inbox: new List(),
         backlog: new List(),
@@ -31,6 +34,7 @@ export class ToDoBoardModel extends BoardModel {
         tomorrow: new List(),
         day: new List(),
         done: new List(),
+        pinned: new List()
     };
     constructor(id: string) {
         super();
@@ -63,6 +67,14 @@ export const ToDoGroomer = function() {
     const groom = async () => {
         console.log("Grooming");
 
+        console.log("Syncing local config JSON files with configuration cards on board");
+
+        await controller.syncConfigJsonWithCard("auto-due.config.json", "Auto-Due Configuration");
+        await controller.syncConfigJsonWithCard("auto-label.config.json", "Auto-Label Configuration");
+        await controller.syncConfigJsonWithCard("auto-link.config.json", "Auto-Link Configuration");
+
+// TODO: how much of this procedure could be batched/parallelized?
+
         console.log("Adding history lists from past 12 months to data model");
         /**
          * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
@@ -81,6 +93,9 @@ export const ToDoGroomer = function() {
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
 
+
+        // TODO: introduce a simple machine learning model to come up with auto-label mappings?
+
         /** auto-label cards based on titles */
         console.log("Adding labels according to keywords in card titles");
         
@@ -91,11 +106,14 @@ export const ToDoGroomer = function() {
                 await controller.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
             });
         
-        const autoLabelConfig = require(join(__dirname, "../../config/auto-label.config.json"));
+        const autoLabelConfigPath = join(process.cwd(), "config/auto-label.config.json");
+        if (existsSync(autoLabelConfigPath)) {
+            const autoLabelConfig = require(autoLabelConfigPath);
 
-        Object.keys(autoLabelConfig).forEach(async (labelName) => {
-            await controller.addLabelToCardsInListIfTitleContains(labelName, autoLabelConfig[labelName]);
-        });
+            Object.keys(autoLabelConfig).forEach(async (labelName) => {
+                await controller.addLabelToCardsInListIfTitleContains(labelName, autoLabelConfig[labelName]);
+            });
+        }
 
         console.log("Updating task dependencies");
 
@@ -111,20 +129,58 @@ export const ToDoGroomer = function() {
         await controller.parseDueDatesFromCardNames();
 
         /** assign due dates to cards without due dates */
-        await controller.assignDueDatesIf(model.lists.day.id, 1, 
-            Not(cardHasDueDate));
-        await controller.assignDueDatesIf(model.lists.tomorrow.id, 2, 
-            Not(cardHasDueDate));
-        await controller.assignDueDatesIf(model.lists.week.id, getRemnDaysInWeek(),
-            Not(cardHasDueDate)); 
-        /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
-        await controller.assignDueDatesIf(model.lists.month.id, Math.floor(getRemnDaysInMonth() / 2),
-            Not(cardHasDueDate));
+        const autoDueConfigPath = join(process.cwd(), "config/auto-due.config.json");
+        if (existsSync(autoDueConfigPath)) {
+            const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as { [s: string]: number };
+
+            console.log("Updating due dates based on manual list movements");
+
+            await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
+                wasMovedFromToListFilterFactory(model.lists.backlog.id, [
+                    model.lists.month.id,
+                    model.lists.week.id,
+                    model.lists.tomorrow.id,
+                    model.lists.day.id
+                ]));
+            await controller.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
+                wasMovedFromToListFilterFactory(model.lists.month.id, [
+                    model.lists.week.id,
+                    model.lists.tomorrow.id,
+                    model.lists.day.id
+                ]));
+            await controller.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
+                wasMovedFromToListFilterFactory(model.lists.week.id, [
+                    model.lists.tomorrow.id,
+                    model.lists.day.id
+                ]));
+            await controller.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow,
+                wasMovedFromToListFilterFactory(model.lists.tomorrow.id, [
+                    model.lists.day.id
+                ]));
+
+
+            await controller.assignDueDatesIf(model.lists.day.id, autoDueConfig.day, 
+                Not(cardHasDueDate));
+            await controller.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow, 
+                Not(cardHasDueDate));
+            await controller.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
+                Not(cardHasDueDate)); 
+            /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
+            await controller.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
+                Not(cardHasDueDate));
+            await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog, 
+                Not(cardHasDueDate));
+
+        }
 
         /** auto-link cards which share a label and a common word (>= 3 letters) in title */
         await controller.autoLinkRelatedCards(
             require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
         );
+
+
+
+
 
         console.log("Updating list placements");
 
