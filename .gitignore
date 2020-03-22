@@ -1,8 +1,8 @@
-config/*.config.json
+config/*.json
 config/boards.json
 config/key.json
 config/result.json
-config/templates
+!config/templates
 node_modules
 dist
 deploy.sh
@@ -11,3 +11,6 @@ deploy.sh
 cache/*
 !cache/.gitignore
 .vscode
+log
+!log/.gitkeep
+*.out

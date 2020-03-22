@@ -8,6 +8,7 @@ import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
 import { existsSync } from "fs";
+import { logger } from "../lib/logger";
 const secrets = require("../../config/key.json");
 const boards = require("../../config/boards.json");
 
@@ -46,14 +47,15 @@ export class ToDoBoardModel extends BoardModel {
  * Factory which returns a groomer object, whose run() method will groom the Trello board
  */
 export const ToDoGroomer = function() {
-    console.log("Started " + new Date().toString());
+    const start = new Date();
+    logger.info("Started " + start.toString());
 
-    console.log("Building model");
+    logger.info("Building model");
 
     /** instantiate private data members, board model and controller */
     const model = new ToDoBoardModel(boards.todo.id)
 
-    console.log("Initializing controller");
+    logger.info("Initializing controller");
 
     const controller = new BoardController<ToDoBoardModel>(model, {
         key: secrets.key,
@@ -65,9 +67,9 @@ export const ToDoGroomer = function() {
      *  NOTE: order is important here, do not change order without careful consideration
      */
     const groom = async () => {
-        console.log("Grooming");
+        logger.info("Grooming");
 
-        console.log("Syncing local config JSON files with configuration cards on board");
+        logger.info("Syncing local config JSON files with configuration cards on board");
 
         await controller.syncConfigJsonWithCard("auto-due.config.json", "Auto-Due Configuration");
         await controller.syncConfigJsonWithCard("auto-label.config.json", "Auto-Label Configuration");
@@ -75,12 +77,11 @@ export const ToDoGroomer = function() {
 
 // TODO: how much of this procedure could be batched/parallelized?
 
-        console.log("Adding history lists from past 12 months to data model");
+        logger.info("Adding history lists from past 12 months to data model");
         /**
          * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
          *  - this should probably be factored out into groomer, this is not good generalized behavior
          */
-        const start = new Date();
         const yearnum = start.getFullYear() ;
         const monthnum = start.getMonth();
         const historyLists = await controller.addListsToModelIfNameMeetsConditions([(x: List) => {
@@ -94,10 +95,12 @@ export const ToDoGroomer = function() {
         }]);
 
 
-        // TODO: introduce a simple machine learning model to come up with auto-label mappings?
+        // TODO: introduce a simple machine learning model to come up with auto-label mappings
+        // TODO: once model implemented, reconsider how autolabelling occurs
+        // TODO: integrate stopwords into the auto-labelling process
 
         /** auto-label cards based on titles */
-        console.log("Adding labels according to keywords in card titles");
+        logger.info("Adding labels according to keywords in card titles");
         
         controller.AllLabelNames
             /** work keyword conflicts with a lot of irrelevant card titles */
@@ -115,7 +118,7 @@ export const ToDoGroomer = function() {
             });
         }
 
-        console.log("Updating task dependencies");
+        logger.info("Updating task dependencies");
 
         /**
          * groom checklists
@@ -133,15 +136,16 @@ export const ToDoGroomer = function() {
         if (existsSync(autoDueConfigPath)) {
             const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as { [s: string]: number };
 
-            console.log("Updating due dates based on manual list movements");
+            logger.info("Updating due dates based on manual list movements");
 
+            // TODO: provide some random staggering/backoff mechanism to avoid pileups
             await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
                 wasMovedFromToListFilterFactory(model.lists.backlog.id, [
                     model.lists.month.id,
                     model.lists.week.id,
                     model.lists.tomorrow.id,
                     model.lists.day.id
-                ]));
+                ]), 7 /** one week of random stagger (unique on per card basis, not per call to assignDueDatesIf */);
             await controller.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
                 wasMovedFromToListFilterFactory(model.lists.month.id, [
                     model.lists.week.id,
@@ -177,12 +181,12 @@ export const ToDoGroomer = function() {
         await controller.autoLinkRelatedCards(
             require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
         );
+        // TODO: instead of ignoreWords, could use a stopwords library?
 
 
 
 
-
-        console.log("Updating list placements");
+        logger.info("Updating list placements");
 
         /** move completed items to Done */
         await controller.moveCardsFromToIf([
@@ -229,26 +233,38 @@ export const ToDoGroomer = function() {
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
 
-        console.log("Marking appropriate items done");
+        logger.info("Marking appropriate items done");
 
         await controller.markCardsInListDone(model.lists.done.id);
 
-        console.log("Pruning repeat-labeled cards from history lists")
+        logger.info("Pruning repeat-labeled cards from history lists")
 
         historyLists.forEach(async (historyList) => {
             await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
         });
 
 
-        const runtime = +(new Date()) - +(start);
 
-        console.log(`Sent ${controller.NumRequests} requests in ${runtime}ms`);
+
+
+
+        // TODO: dump JSON data for card labels to train machine learning model
+        controller.dump();
+
+
+
+
+        const curTime = new Date();
+        const runtime = (curTime.getTime() - start.getTime()) / 1000;
+
+        logger.info(`Sent ${controller.NumRequests} requests in ${runtime} seconds`);
     }
 
     /** return the groomer object, exposing the run() method */
     return {
-        run: () => {
-            controller.isAlive.then(groom);
+        run: async () => {
+            await controller.isAlive;
+            await groom();
         }
     }
 }

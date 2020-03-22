@@ -23,14 +23,14 @@ export class BoardModel {
     getAllCards(): ICard[] {
         let allCards: ICard[] = [];
         for (const listName in this.lists) {
-            allCards = allCards.concat(...this.lists[listName].getCards());
+            allCards = allCards.concat(this.lists[listName].getCards());
         }
         return allCards;
     }
     getAllCardNames(): string[] {
         let allNames: string[] = [];
         for (const listName in this.lists) {
-            allNames = allNames.concat(...this.lists[listName].getCardNames());
+            allNames = allNames.concat(this.lists[listName].getCardNames());
         }
         return allNames;
     }

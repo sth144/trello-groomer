@@ -1,0 +1,20 @@
+{
+    "day": 1,
+    "tomorrow": 2,
+    "week": {
+        "periodType": "week",
+        "endOfPeriod": true,
+        "dividePeriodBy": 1
+    },
+    "month": {
+        "periodType": "month",
+        "endOfPeriod": true,
+        "dividePeriodBy": 2
+    },
+    "backlog": {
+        "periodType": "month",
+        "endOfPeriod": false,
+        "multiplyPeriodBy": 5,
+        "dividePeriodBy": 3
+    }
+}

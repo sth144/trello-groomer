@@ -1,31 +1,34 @@
 {
-    "name": "trello",
-    "version": "1.0.0",
-    "description": "",
-    "main": "dist/index.js",
-    "scripts": {
-        "build": "npm install && tsc -p .",
-        "start": "node dist/index.js",
-        "test": "mocha --exit --require ts-node/register src/**/*.spec.ts",
-        "deploy": "bash ./deploy.sh"
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "express": "^4.17.1",
-        "request": "^2.88.0",
-        "rxjs": "^6.5.3"
-    },
-    "devDependencies": {
-        "@types/chai": "^4.2.9",
-        "@types/mocha": "^7.0.1",
-        "@types/node": "^12.7.8",
-        "@types/request": "^2.48.3",
-        "chai": "^4.2.0",
-        "mocha": "^7.0.1",
-        "ts-loader": "^6.2.1",
-        "ts-node": "^8.6.2",
-        "tsconfig-paths": "^3.9.0",
-        "typescript": "^3.8.2"
-    }
+  "name": "trello",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npm install && tsc -p .",
+    "start": "node dist/index.js",
+    "test": "mocha --exit --require ts-node/register src/**/*.spec.ts",
+    "deploy": "bash ./deploy.sh"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cron": "^1.8.2",
+    "express": "^4.17.1",
+    "request": "^2.88.0",
+    "rxjs": "^6.5.3",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.9",
+    "@types/cron": "^1.7.2",
+    "@types/mocha": "^7.0.1",
+    "@types/node": "^12.7.8",
+    "@types/request": "^2.48.3",
+    "chai": "^4.2.0",
+    "mocha": "^7.0.1",
+    "ts-loader": "^6.2.1",
+    "ts-node": "^8.6.2",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.8.2"
+  }
 }

@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 export enum Weekday {
     Sunday,
     Monday,
@@ -133,7 +135,7 @@ export function parseDueDate(inputStr: string, defaultDue: string)
             }
             processedInput = inputStr.replace(DateRegexes.MonthDayTime, "");
         } else if (extractDue = inputStr.match(DateRegexes.DayNameTime)) {
-            console.log(extractDue);
+            logger.info(extractDue);
             const date = new Date();
             const split = extractDue[0].split("@");
             const dayStr = split[0];

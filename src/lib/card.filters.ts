@@ -1,5 +1,5 @@
 import { ICard, IAction } from "./card.interface";
-import { getNextWeekDay, Weekday } from "./date.utils";
+import { getNextWeekDay, Weekday, diffBtwnDatesInDays } from "./date.utils";
 
 export const cardIsComplete = (card: ICard) => {
     if (card.dueComplete) {
@@ -117,7 +117,7 @@ export function wasMovedFromToListFilterFactory(toListId: string, fromListIds: s
             const newDue = (<{ due: string }>updateCardActions[lastDueDateActionIndex].data.card).due
             
             if (newDue === null) {
-                /** due date was removed, return true (caller should perform action) */
+                /** due date was removed, return false (caller should do nothing) */
                 return false;
             } else {
                 if (oldDue === null) {
@@ -129,6 +129,10 @@ export function wasMovedFromToListFilterFactory(toListId: string, fromListIds: s
 
                     if (+(lastDueActionDatePost) < +(lastDueActionDatePre)) {
                         /** if most recent due date action moved due date more recent, return true */
+                        return true;
+                    }
+                    if (diffBtwnDatesInDays(lastDueActionDatePost, new Date()) <= 0) {
+                        /** if new due date is in the past, that action is moot, return true */
                         return true;
                     }
                     /** due date moved backward, return false below (don't perform any action) */

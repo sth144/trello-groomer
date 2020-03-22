@@ -2,7 +2,10 @@ import { getRemnDaysInWeek, getRemnDaysInMonth, getRemnDaysInYear } from "./date
 
 export function parseAutoDueConfig(path: string) {
     const result = { };
-    const autoDueConfigRaw = require(path)
+
+    const autoDueConfigRaw = require(path);
+
+    // TODO: this causes a crash on Raspberry Pi
     Object.entries(autoDueConfigRaw).forEach((x: [string, unknown]) => {
         if (typeof x[1] === "object") {
             if (x[1].hasOwnProperty("periodType")) {

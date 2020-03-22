@@ -1,13 +1,14 @@
 // TODO: documentation card in Trello board
 
+import { TrelloHttpClient } from "../lib/http.client";
 import { BoardModel } from "../model/board.model";
-import { ICard, IAction } from "../lib/card.interface";
+import { ICard } from "../lib/card.interface";
 import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
 import { getNDaysFromNow, parseDueDate } from '../lib/date.utils';
-import { inspect } from "util";
+import { logger } from "../lib/logger";
 import { writeFileSync, existsSync } from "fs";
 import { 
     removePropsByDotPath, detectRemovals, ConfigObj, 
@@ -15,7 +16,6 @@ import {
     detectLiteralChanges
 } from "../lib/object.utils";
 import { join } from "path";
-const request = require("request");
 
 /********************************************************************************************
  * BoardController exposes public methods which allow updating of Trello board. Enables     *
@@ -28,16 +28,16 @@ export class BoardController<T extends BoardModel> {
     private isAlive$ = new ReplaySubject<boolean>(1);
     public isAlive = this.isAlive$.pipe(first()).toPromise();
 
-    private numRequestsSent: number = 0;
-    public get NumRequests(): number {
-        return this.numRequestsSent;
-    }
-
     public get AllLabelNames() {
         return Object.keys(this.boardModel.getLabels());
     }
 
     private allListsOnBoard: List[] = [];
+
+    private httpClient: TrelloHttpClient = new TrelloHttpClient(this.secrets);
+    public get NumRequests(): number {
+        return this.httpClient.NumRequests;
+    }
 
     constructor(private boardModel: T, private secrets: { key: string, token: string }) {
         this.buildModel();
@@ -51,7 +51,7 @@ export class BoardController<T extends BoardModel> {
             /* don't rely on / assume existence of inbox list... */
             (this.boardModel.getLists() as { inbox: { id: string } }).inbox.id : undefined)
         : Promise<ICard> {
-        return await this.asyncPost(`/cards?idList=${toListId}`, opts);
+        return await this.httpClient.asyncPost(`/cards?idList=${toListId}`, opts);
     }
 
     public hasLabelFilterFactory(labelName: string) {
@@ -103,14 +103,14 @@ export class BoardController<T extends BoardModel> {
                         });
 
                         /** change name of checklist item to include link */
-                        await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
-                        const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                        await this.httpClient.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
+                        const replacedCheckItem = await this.httpClient.asyncPost(`/checklists/${checklistId}/checkItems/`, {
                             /** prevents multiple URLs from being inserted */
                             name: `${checklistItem.name.split("https://")[0]} ${childCard.shortUrl}`
                         });
 
                         /** link added card to parent @1 */
-                        await this.asyncPost(`/cards/${childCard.id}/attachments`, {
+                        await this.httpClient.asyncPost(`/cards/${childCard.id}/attachments`, {
                             name: `parent:${parentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
                             url: parentCard.shortUrl
                         });
@@ -148,8 +148,8 @@ export class BoardController<T extends BoardModel> {
                             && this.boardModel.getAllChecklistItems().filter((x) => {
                                 x.id === parsed["checkItemId"] && x.state !== "complete"
                             }).length > 0) {
-                            this.asyncPut(`/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?state=complete`)
-                                .catch((err) => { console.log(err); });
+                            this.httpClient.asyncPut(`/cards/${parsed.parent}/checkItem/${parsed.checkItemId}?state=complete`)
+                                .catch((err) => { logger.info(err); });
                         }
                     }
                 }
@@ -176,15 +176,15 @@ export class BoardController<T extends BoardModel> {
                         /** if card (prep card) exists with name */
                         if (checklistItem.name === prepCard.name) {
                             /** insert prep card shortURL into check item name */
-                            await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
-                            const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                            await this.httpClient.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
+                            const replacedCheckItem = await this.httpClient.asyncPost(`/checklists/${checklistId}/checkItems/`, {
                                 /** split()[] prevents multiple URLs from being inserted */
                                 name: `${checklistItem.name.split("https://")[0]} ${prepCard.shortUrl}`
                             });
 
                             const dependentCard = this.boardModel.getCardById(checklists[checklistId].idCard);
                             /** provide link to dependent card in prep card */
-                            await this.asyncPost(`/cards/${prepCard.id}/attachments`, {
+                            await this.httpClient.asyncPost(`/cards/${prepCard.id}/attachments`, {
                                 name: `dependent:${dependentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
                                 url: dependentCard.shortUrl
                             });
@@ -215,9 +215,9 @@ export class BoardController<T extends BoardModel> {
                                 && this.boardModel.getAllChecklistItems().filter((x) => {
                                     x.id === parsed["checkItemId"] && x.state !== "complete"
                                 }).length > 0) {
-                                this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
+                                this.httpClient.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
                                     + `state=complete`).catch((err) => {
-                                        console.log(err);
+                                        logger.info(err);
                                     });
                                 }
                         }
@@ -252,14 +252,14 @@ export class BoardController<T extends BoardModel> {
                         });
 
                         /** change name of checklist item to include link */
-                        await this.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
-                        const replacedCheckItem = await this.asyncPost(`/checklists/${checklistId}/checkItems/`, {
+                        await this.httpClient.asyncDelete(`/checklists/${checklistId}/checkItems/${checklistItem.id}/`);
+                        const replacedCheckItem = await this.httpClient.asyncPost(`/checklists/${checklistId}/checkItems/`, {
                             /** prevents multiple URLs from being inserted */
                             name: `${checklistItem.name.split("https://")[0]} ${childCard.shortUrl}`
                         });
 
                         /** link added card to parent @1 */
-                        await this.asyncPost(`/cards/${childCard.id}/attachments`, {
+                        await this.httpClient.asyncPost(`/cards/${childCard.id}/attachments`, {
                             name: `parent:${parentCard.id}|checklistId:${checklistId}|checkItemId:${replacedCheckItem.id}`,
                             url: parentCard.shortUrl
                         });
@@ -289,9 +289,9 @@ export class BoardController<T extends BoardModel> {
                                 && this.boardModel.getAllChecklistItems().filter((x) => {
                                     x.id === parsed["checkItemId"] && x.state !== "complete"
                                 }).length > 0) {
-                                this.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
+                                this.httpClient.asyncPut(`/cards/${parsed.dependent}/checkItem/${parsed.checkItemId}?`
                                     + `state=complete`).catch((err) => {
-                                        console.log(err);
+                                        logger.info(err);
                                     });
                                 }
                         }
@@ -312,7 +312,7 @@ export class BoardController<T extends BoardModel> {
                 if (splitCheckItemName.length > 1) {
                     for (const card of this.boardModel.getAllCards()) {
                         if (!card.dueComplete && checklistItem.name.indexOf(card.shortUrl) !== -1) {
-                            await this.asyncPut(`/cards/${card.id}?dueComplete=true`);
+                            await this.httpClient.asyncPut(`/cards/${card.id}?dueComplete=true`);
                         }
                     }
                 }
@@ -334,28 +334,39 @@ export class BoardController<T extends BoardModel> {
             for (const card of fromListCards) {
                 if (filter(card)) {
                     // TODO: this should be encapsulated in a moveCard operation
-                    await this.asyncPut(`/cards/${card.id}?idList=${toListId}&pos=top`);
+                    await this.httpClient.asyncPut(`/cards/${card.id}?idList=${toListId}&pos=top`);
 
                     /** update local model */
                     [fromListId, toListId].forEach(async (id) => {
-                        this.boardModel.getListById(id).cards = await this.asyncGet(`/lists/${id}/cards`);
+                        this.boardModel.getListById(id).cards = await this.httpClient.asyncGet(`/lists/${id}/cards`);
                     });
                 }
             }
         }
     }
 
-    public async assignDueDatesIf(listId: string, dueInDays: number, conditionFilter: (card: ICard) => boolean)
-        : Promise<void> {
-        const dueDate: Date = getNDaysFromNow(dueInDays);
+    public async assignDueDatesIf(
+        listId: string, dueInDays: number, conditionFilter: (card: ICard) => boolean, randomStagger: number = null
+    ) : Promise<void> {
+        const createDueDate = () => {
+            if (randomStagger !== null) {
+                let staggerNDays = Math.floor(Math.random() * (randomStagger + 1));
+                if (Math.random() < 0.5) {
+                    staggerNDays *= -1;
+                }
+                dueInDays = Math.max(dueInDays + staggerNDays, 0);
+            }
+            return getNDaysFromNow(dueInDays);
+        }
 
         const batch: Promise<any>[] = [];
         this.boardModel.getListById(listId).getCards()
             .filter(conditionFilter)
             .map((card) => {
-                console.log(`Assigning due date to ${card.name}: ${dueDate}`);
-                batch.push(this.asyncPut(`/cards/${card.id}?due=${dueDate}`));
-                card.due = dueDate.toUTCString();
+                const newDueDate = createDueDate();
+                logger.info(`Assigning due date to ${card.name}: ${newDueDate}`);
+                batch.push(this.httpClient.asyncPut(`/cards/${card.id}?due=${newDueDate}`));
+                card.due = newDueDate.toUTCString();
             });
 
         await Promise.all(batch);
@@ -374,7 +385,7 @@ export class BoardController<T extends BoardModel> {
                 
                 if (checkFor.some(x => cardNameLowerCase.indexOf(x) !== -1)
                 && card.idLabels.indexOf(labelId) === -1) {
-                    await this.asyncPost(`/cards/${card.id}/idLabels?`, {
+                    await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
                         value: labelId
                     });
                     card.idLabels.push(labelId);
@@ -388,7 +399,7 @@ export class BoardController<T extends BoardModel> {
             .filter((card) => card.due !== null)
             .filter((card) => card.dueComplete === false)
             .map(async (card) => {
-                await this.asyncPut(`/cards/${card.id}?dueComplete=true`);
+                await this.httpClient.asyncPut(`/cards/${card.id}?dueComplete=true`);
             });
     }
 
@@ -396,7 +407,7 @@ export class BoardController<T extends BoardModel> {
         this.boardModel.getListById(listId).cards.filter((card: any) => {
             return card.labels.some((l: any) => l.name === labelName);
         }).forEach(async (cardWithLabel) => {
-            await this.asyncDelete(`/cards/${cardWithLabel.id}`);
+            await this.httpClient.asyncDelete(`/cards/${cardWithLabel.id}`);
         });
     }
 
@@ -492,7 +503,7 @@ export class BoardController<T extends BoardModel> {
 
                     /** post links asynchronously */
                     linksToAdd.forEach(async (cardToLink: ICard) => {
-                        await this.asyncPost(`/cards/${cardA.id}/attachments`, {
+                        await this.httpClient.asyncPost(`/cards/${cardA.id}/attachments`, {
                             url: cardToLink.shortUrl
                         });
                     });
@@ -507,7 +518,7 @@ export class BoardController<T extends BoardModel> {
             if (card.due === null
                 && ((dueDate = parsedResult.dueDateStr) !== null)
                 && ((parsedName = parsedResult.processedInputStr) !== null)) {
-                await this.asyncPut(`/cards/${card.id}?due=${dueDate}&name=${parsedName}`);
+                await this.httpClient.asyncPut(`/cards/${card.id}?due=${dueDate}&name=${parsedName}`);
             }
         }
     }
@@ -542,7 +553,7 @@ export class BoardController<T extends BoardModel> {
         
         const configUpdate = syncObjectsWithPreference(updateFromCard, loadedConfig);
 
-        await this.asyncPut(`/cards/${targetConfigSyncCard.id}?desc=${JSON.stringify(configUpdate, null, 4)}`)
+        await this.httpClient.asyncPut(`/cards/${targetConfigSyncCard.id}?desc=${JSON.stringify(configUpdate)}`)
         
         // TODO: cache these with redis?
 
@@ -555,12 +566,12 @@ export class BoardController<T extends BoardModel> {
      * initialize the board model (pull data from Trello)
      */
     private async buildModel(): Promise<void> {
-        console.log("Retrieving lists");
+        logger.info("Retrieving lists");
         // TODO: can these requests be batched?
         /**
          * get all lists on board, map to lists specified on BoardModel
          */
-        this.allListsOnBoard = await this.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
+        this.allListsOnBoard = await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
         const modelListsHandle = this.boardModel.getLists() as any;
 
         for (const responseList of this.allListsOnBoard) {
@@ -574,7 +585,7 @@ export class BoardController<T extends BoardModel> {
                     });
                     /** fetch cards for list */
                     (modelListsHandle)[listNameToFetch].cards
-                        = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
+                        = await this.httpClient.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
                 }
             }
         };
@@ -582,7 +593,7 @@ export class BoardController<T extends BoardModel> {
         /**
          * get all checklists on board
          */
-        const checklistsOnBoard = await this.asyncGet(`/boards/${this.boardModel.id}/checklists`);
+        const checklistsOnBoard = await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/checklists`);
 
         for (const responseChecklist of checklistsOnBoard) {
             /** create a new checklist model in memory */
@@ -605,12 +616,12 @@ export class BoardController<T extends BoardModel> {
             }
         }
 
-        console.log("Retrieving labels");
+        logger.info("Retrieving labels");
         /**
          * get all labels on board
          */
         const allLabels = { };
-        (await this.asyncGet(`/boards/${this.boardModel.id}/labels`)).map((label: any) => {
+        (await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`)).map((label: any) => {
             if (label.hasOwnProperty("id") && label.hasOwnProperty("name")) {
                 Object.assign(allLabels, { [label.name]: label.id })
             }
@@ -623,11 +634,6 @@ export class BoardController<T extends BoardModel> {
 
 
         
-
-        writeFileSync(join(process.cwd(), "config/result.json"), JSON.stringify(this.boardModel, null, 4));
-
-
-
 
 
 
@@ -658,7 +664,7 @@ export class BoardController<T extends BoardModel> {
                 });
                 /** fetch cards for list */
                 (modelListsHandle)[responseList.name].cards
-                    = await this.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
+                    = await this.httpClient.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
                 result.push(newList);
             }
         }
@@ -667,89 +673,23 @@ export class BoardController<T extends BoardModel> {
         return result;
     }
 
-    /********************************************************************************************
-     * Private methods which interact with the Trello API to retrieve / manipulate remote data  *
-     ********************************************************************************************/
+    public dump(): void {
+        // TODO: merge all this label stuff into a single json file
+        writeFileSync(join(process.cwd(), "cache/labels.json"), JSON.stringify(this.boardModel.getLabels()));
 
-    private async asyncGet(url: string): Promise<any> {
-        this.numRequestsSent++;
-
-        console.log(`GET ${url}`);
-
-        return new Promise((resolve, reject) => {
-            request({
-                method: "GET",
-                uri: this.getLongUrl(url),
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
-            });
+        const labelData: any[] = []
+        this.boardModel.getAllCards().forEach(x => { 
+            if (x.idLabels.length > 0) {
+                labelData.push({ name: x.name, labels: x.idLabels });
+            } 
         });
+        writeFileSync(join(process.cwd(), "cache/label-data.json"), JSON.stringify(labelData));
+
+        const unlabeledCards: any[] = this.boardModel.getAllCards().filter(x => x.idLabels.length === 0).map(x => x.name);
+        writeFileSync(join(process.cwd(), "cache/unlabeled.json"), JSON.stringify(unlabeledCards))
+
+        writeFileSync(join(process.cwd(), "cache/model.json"), JSON.stringify(this.boardModel, null, 4));
+
     }
-
-    private async asyncPut(url: string): Promise<any> {
-        this.numRequestsSent++;
-
-        const printUrl = url.replace("\n", "").replace("\t", "").replace("\r", "");
-        console.log(`PUT ${printUrl}`);
-
-        return new Promise((resolve, reject) => {
-            request({
-                method: "PUT",
-                uri: this.getLongUrl(url)
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
-            });
-        });
-    }
-
-    private async asyncPost(url: string, opts: any): Promise<any> {
-        this.numRequestsSent++;
-
-        console.log(`POST ${url}`);
-
-        return new Promise((resolve, reject) => {
-            let params = "";
-            for (let prop of Object.keys(opts)) {
-                params = params.concat(`&${prop}=${opts[prop]}`);
-            }
-            const uri = `${this.getLongUrl(url)}${params}`;
-            request({
-                method: "POST",
-                uri: uri
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
-            });
-        });
-    }
-
-    private async asyncDelete(url: string): Promise<any> {
-        this.numRequestsSent++;
-
-        console.log(`DELETE ${url}`);
-
-        return new Promise((resolve, reject) => {
-            request({
-                method: "DELETE",
-                uri: this.getLongUrl(url)
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
-            });
-        });
-    }
-
-    /**
-     * takes a URL path and returns a full url, with domain, key and token
-     */
-    private getLongUrl(path: string): string {
-        let end = `key=${this.secrets.key}&token=${this.secrets.token}`;
-        if (path.indexOf("?") === -1) {
-            end = "?".concat(end);
-        } else {
-            end = "&".concat(end);
-        }
-        return `https://api.trello.com/1${path}${end}`;
-    }
-
-
 }
 
