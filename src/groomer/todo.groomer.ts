@@ -138,7 +138,7 @@ export const ToDoGroomer = function() {
 
             logger.info("Updating due dates based on manual list movements");
 
-            // TODO: provide some random staggering/backoff mechanism to avoid pileups
+            // TODO: this no longer seems to work. Fix it!!
             await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
                 wasMovedFromToListFilterFactory(model.lists.backlog.id, [
                     model.lists.month.id,
@@ -241,18 +241,10 @@ export const ToDoGroomer = function() {
 
         historyLists.forEach(async (historyList) => {
             await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
-        });
-
-
-
-
-
+        })
 
         // TODO: dump JSON data for card labels to train machine learning model
         controller.dump();
-
-
-
 
         const curTime = new Date();
         const runtime = (curTime.getTime() - start.getTime()) / 1000;

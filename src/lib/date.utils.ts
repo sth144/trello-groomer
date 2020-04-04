@@ -54,11 +54,11 @@ export function getRemnDaysInMonth(): number {
 
 export function getRemnDaysInYear(): number {
     const beginNextYear = new Date((new Date().getFullYear())+1, 0, 1);
-    return diffBtwnDatesInDays(new Date(), beginNextYear)
+    return diffBtwnDatesInDays(beginNextYear, new Date());
 }
 
-export function diffBtwnDatesInDays(firstDate: Date, secondDate: Date) {
-    return Math.round(((+secondDate)-(+firstDate))/(1000*60*60*24));
+export function diffBtwnDatesInDays(date1: Date, date2: Date) {
+    return Math.round(((+date1)-(+date2))/(1000*60*60*24));
 }
 
 /**

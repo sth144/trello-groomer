@@ -23,16 +23,19 @@ export class TrelloHttpClient {
             request({
                 method: "GET",
                 uri: this.getLongUrl(url),
+                timeout: 60000
             }, (err: any, response: any, body: any) => {
                 let result = null;
                 try {
                     result = JSON.parse(body)
                 } catch(e) {
-                    console.log(`${err} ${e} ${response}`)
+                    console.log(`${err} ${e} ${response}`);
                     result = { };
                 }
                 resolve(result);
             });
+
+            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -49,6 +52,8 @@ export class TrelloHttpClient {
             }, (err: any, response: any, body: any) => {
                 resolve(JSON.parse(body));
             });
+
+            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -69,6 +74,8 @@ export class TrelloHttpClient {
             }, (err: any, response: any, body: any) => {
                 resolve(JSON.parse(body));
             });
+
+            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -84,6 +91,8 @@ export class TrelloHttpClient {
             }, (err: any, response: any, body: any) => {
                 resolve(JSON.parse(body));
             });
+
+            setTimeout(() => { reject(); }, 60000);
         });
     }
 

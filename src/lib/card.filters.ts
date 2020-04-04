@@ -124,9 +124,9 @@ export function wasMovedFromToListFilterFactory(toListId: string, fromListIds: s
                     /** date was added for first time, return true (caller will perform action) */
                     return true;
                 } else {
+
                     const lastDueActionDatePre = new Date(oldDue);
                     const lastDueActionDatePost = new Date(newDue);
-
                     if (+(lastDueActionDatePost) < +(lastDueActionDatePre)) {
                         /** if most recent due date action moved due date more recent, return true */
                         return true;

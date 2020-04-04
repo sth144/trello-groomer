@@ -9,39 +9,34 @@ process.on("unhandledRejection", (reason: any, p: Promise<any>) => {
     console.error(reason);
 });
 
-/**
- * create a ToDoGroomer object and run groomer on start, then set up a Cron job to keep
- *  running every 10 min
- */
-const CronJob = require('cron').CronJob;
+/** node-cron has a bug, reimplemented using setInterval until a better solution is identified */
 
-let mutex = false;
-const job = new CronJob(
-    '0 */5 * * * *', /** time pattern */
-    () => {
-        logger.info(`************************************`
-                    +` Starting Cron job ${(new Date()).toLocaleTimeString()}`
-                    +` ***************************************`);
-        if (!mutex) {
-            logger.info("Mutex acquired");
-            mutex = true;
-            ToDoGroomer().run().then(() => {
-                mutex = false;
-                logger.info(`Cron job finished ${(new Date()).toLocaleTimeString()}, mutex released`);
-            }).catch((e) => {
-                logger.info(`Run failed: ${e}`);
-                mutex = false;
-            });
-        } else {
-            logger.info("There is still a job running, skipping scheduled run");
+// TODO: provide a timeout to catch "stuck" runs and abort
+
+let mutex = false, iter = 0, jobNo = 0;
+
+(async function runJob() { 
+    setTimeout(runJob, 5 * 60 * 1000);
+    logger.info(`************************************`
+                +` Starting job (${iter++}) ${(new Date()).toLocaleTimeString()}`
+                +` ***************************************`);
+    if (!mutex) {
+        logger.info("Mutex acquired");
+        [ mutex, jobNo ] = [ true, jobNo + 1 ];
+        try {
+            const f = setTimeout(() => { throw new Error("Job timed out"); }, 2 * 5 * 60 * 10000);
+            const groomer = await ToDoGroomer();
+            await groomer.run();
+            mutex = false;
+            logger.info(`Job finished ${(new Date()).toLocaleTimeString()}, mutex released`);
+            clearTimeout(f);
+        } catch (e) {
+            logger.info(`Run failed: ${e}`);
+            mutex = false;
         }
-    }, /** onTick */
-    null /** onComplete */, 
-    false /** start (?) */, 
-    "America/Chicago" /** time zone */, 
-    this /** context (?) */, 
-    true /** run on init, runs right away, then begins running every 10 min */
-);
+    } else {
+        logger.info(`Job ${jobNo} is still running, skipping scheduled run`);
+    }
+})()
 
-job.start();
 // TODO: introduce daily, weekly, monthy tasks (when robust enough), replace Trello Butler

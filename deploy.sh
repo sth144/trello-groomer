@@ -9,7 +9,7 @@ if [ -z $REMOTE_HOST ] || [ -z $REMOTE_PATH ] || [ -z $REMOTE_PWRD ]; then
     exit 1
 fi
 
-rsync -avr -e ssh --exclude=node_modules,cache,dist,log,.git . "$REMOTE_HOST:$REMOTE_PATH"
+rsync -avr -e ssh --exclude=node_modules,cache,dist,log,.git,.vscode . "$REMOTE_HOST:$REMOTE_PATH"
 
 # NOTE: systemd service must be configured on remote host
 ssh $REMOTE_HOST "cd $REMOTE_PATH; npm install && tsc -p . && echo $REMOTE_PWRD | sudo -S systemctl restart trello-groomer && exit"

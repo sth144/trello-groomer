@@ -373,7 +373,7 @@ export class BoardController<T extends BoardModel> {
     }
 
     public async addLabelToCardsInListIfTitleContains(labelName: string, checkFor: string[]): Promise<void>  {
-        checkFor = checkFor.map(x => x.toLowerCase());
+        checkFor = checkFor.map(x => x !== undefined && x.toLowerCase());
 
         const allLabels = this.boardModel.getLabels();
         if (allLabels.hasOwnProperty(labelName) && allLabels[labelName].length > 0) {

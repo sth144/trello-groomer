@@ -25,7 +25,7 @@ export class BoardModel {
         for (const listName in this.lists) {
             allCards = allCards.concat(this.lists[listName].getCards());
         }
-        return allCards;
+        return allCards.filter(x => x !== undefined);
     }
     getAllCardNames(): string[] {
         let allNames: string[] = [];
