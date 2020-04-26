@@ -14,7 +14,11 @@ before_install:
 # build
 script:
   - echo "HELLO TRAVIS"
+  # TODO: run the Docker build
+  - docker build -t trello-groomer:latest . 
+  # TODO: run tests
 
 # deploy
 after_success:
   - echo "AFTER SUCCESS"
+  # TODO: push to DockerHub
