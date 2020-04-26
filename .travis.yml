@@ -10,11 +10,12 @@ services:
 # install
 before_install:
   - echo "BEFORE INSTALL"
+  # TODO: set up environment?
+  - echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
 
 # build
 script:
   - echo "HELLO TRAVIS"
-  # TODO: run the Docker build
   - docker build -t trello-groomer:latest . 
   # TODO: run tests
 
@@ -22,3 +23,4 @@ script:
 after_success:
   - echo "AFTER SUCCESS"
   # TODO: push to DockerHub
+  - docker push sthinds/trello-groomer
