@@ -16,7 +16,7 @@ before_install:
 # build
 script:
   - echo "HELLO TRAVIS"
-  - docker build -t trello-groomer:latest . 
+  - docker build -t sthinds/trello-groomer . 
   # TODO: run tests
 
 # deploy
