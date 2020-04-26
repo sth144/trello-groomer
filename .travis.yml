@@ -1,3 +1,20 @@
 language: node_js
+node_js:
+  - "stable"
+
+sudo: required
+
 services:
   - docker
+
+# install
+before_install:
+  - echo "BEFORE INSTALL"
+
+# build
+script:
+  - echo "HELLO TRAVIS"
+
+# deploy
+after_success:
+  - echo "AFTER SUCCESS"
