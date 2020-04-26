@@ -1,0 +1,75 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: trello-groomer-config-volume
+  labels:
+    directory: config
+spec:
+  capacity:
+    storage: 5Mi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    # NOTE: this directory must exist
+    path: /home/picocluster/Volumes/trello-groomer-config
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes/hostname
+            operator: In
+            values:
+              - pc2
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trello-groomer-config-claim
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Mii
+  selector:
+    matchLabels:
+      directory: config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trello-groomer
+  labels:
+    app: trello-groomer
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trello-groomer
+  template:
+    metadata:
+      labels:
+        app: trello-groomer
+        name: trello-groomer
+    spec:
+      containers:
+        - name: trello-groomer
+          image: sthinds/trello-groomer
+          imagePullPolicy: Always
+          volumeMounts: 
+            - name: trello-groomer-config-volume
+              mountPath: /usr/src/app/config
+      volumes:
+        - name: trello-groomer-config-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-config-claim

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# script used to launch trello groomer as a systemd service
+
 WHICH_USER=$(cat .env | grep WHICH_USER | sed 's/WHICH_USER=//g')
 
 if [ -z $WHICH_USER ]; then 

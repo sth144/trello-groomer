@@ -109,13 +109,12 @@ export function wasMovedFromToListFilterFactory(toListId: string, fromListIds: s
         }
 
         /** 
-         * if card has been moved more recently than its due date has been changed
+         * if last time due date was changed was after last time card was moved
          */
         if (lastMoveActionIndex < lastDueDateActionIndex) {
             /** examine most recent due date assignment to determine return value */
             const oldDue = (<{ due: string }>updateCardActions[lastDueDateActionIndex].data.old).due
             const newDue = (<{ due: string }>updateCardActions[lastDueDateActionIndex].data.card).due
-            
             if (newDue === null) {
                 /** due date was removed, return false (caller should do nothing) */
                 return false;
@@ -124,18 +123,23 @@ export function wasMovedFromToListFilterFactory(toListId: string, fromListIds: s
                     /** date was added for first time, return true (caller will perform action) */
                     return true;
                 } else {
-
                     const lastDueActionDatePre = new Date(oldDue);
                     const lastDueActionDatePost = new Date(newDue);
                     if (+(lastDueActionDatePost) < +(lastDueActionDatePre)) {
-                        /** if most recent due date action moved due date more recent, return true */
+                        /** if most recent due date action moved to earlier date, return true */
                         return true;
                     }
-                    if (diffBtwnDatesInDays(lastDueActionDatePost, new Date()) <= 0) {
+
+                    const now = new Date();
+                    if (diffBtwnDatesInDays(new Date(updateCardActions[lastDueDateActionIndex].date), now) <= -7) {
+                        /** if most recent due date action was more than 1 week ago */
+                        return true;
+                    }
+                    if (diffBtwnDatesInDays(lastDueActionDatePost, now) <= 0) {
                         /** if new due date is in the past, that action is moot, return true */
                         return true;
                     }
-                    /** due date moved backward, return false below (don't perform any action) */
+                    /** due date moved into future, return false below (don't perform any action) */
                 }
             }
         }

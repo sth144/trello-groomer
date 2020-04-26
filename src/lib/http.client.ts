@@ -24,18 +24,16 @@ export class TrelloHttpClient {
                 method: "GET",
                 uri: this.getLongUrl(url),
                 timeout: 60000
-            }, (err: any, response: any, body: any) => {
+            }, (err: Error, response: Response, body: string) => {
                 let result = null;
                 try {
                     result = JSON.parse(body)
+                    resolve(result);
                 } catch(e) {
-                    console.log(`${err} ${e} ${response}`);
-                    result = { };
+                    logger.error(`${err} ${e} ${response}`);
+                    reject(e);
                 }
-                resolve(result);
             });
-
-            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -48,12 +46,18 @@ export class TrelloHttpClient {
         return new Promise((resolve, reject) => {
             request({
                 method: "PUT",
-                uri: this.getLongUrl(url)
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
+                uri: this.getLongUrl(url),
+                timeout: 60000
+            }, (err: Error, response: Response, body: string) => {
+                let result = null;
+                try {
+                    result = JSON.parse(body)
+                    resolve(result);
+                } catch(e) {
+                    logger.error(`${err} ${e} ${response}`);
+                    reject(e);
+                }
             });
-
-            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -70,12 +74,18 @@ export class TrelloHttpClient {
             const uri = `${this.getLongUrl(url)}${params}`;
             request({
                 method: "POST",
-                uri: uri
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
+                uri: uri,
+                timeout: 60000
+            }, (err: Error, response: Response, body: string) => {
+                let result = null;
+                try {
+                    result = JSON.parse(body)
+                    resolve(result);
+                } catch(e) {
+                    logger.error(`${err} ${e} ${response}`);
+                    reject(e);
+                }
             });
-
-            setTimeout(() => { reject(); }, 60000);
         });
     }
 
@@ -87,12 +97,18 @@ export class TrelloHttpClient {
         return new Promise((resolve, reject) => {
             request({
                 method: "DELETE",
-                uri: this.getLongUrl(url)
-            }, (err: any, response: any, body: any) => {
-                resolve(JSON.parse(body));
+                uri: this.getLongUrl(url),
+                timeout: 60000
+            }, (err: Error, response: Response, body: string) => {
+                let result = null;
+                try {
+                    result = JSON.parse(body)
+                    resolve(result);
+                } catch(e) {
+                    logger.error(`${err} ${e} ${response}`);
+                    reject(e);
+                }
             });
-
-            setTimeout(() => { reject(); }, 60000);
         });
     }
 

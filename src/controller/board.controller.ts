@@ -39,8 +39,12 @@ export class BoardController<T extends BoardModel> {
         return this.httpClient.NumRequests;
     }
 
-    constructor(private boardModel: T, private secrets: { key: string, token: string }) {
-        this.buildModel();
+    constructor(private boardModel: T, private secrets: { key: string, token: string }) { }
+
+    public async wakeUp() {
+        await this.buildModel();
+
+        this.isAlive$.next(true);
     }
 
     /**
@@ -384,7 +388,7 @@ export class BoardController<T extends BoardModel> {
                 const cardNameLowerCase = card.name.toLowerCase();
                 
                 if (checkFor.some(x => cardNameLowerCase.indexOf(x) !== -1)
-                && card.idLabels.indexOf(labelId) === -1) {
+                    && card.idLabels.indexOf(labelId) === -1) {
                     await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
                         value: labelId
                     });
@@ -627,18 +631,6 @@ export class BoardController<T extends BoardModel> {
             }
         });
         this.boardModel.Labels = allLabels;
-
-
-
-
-
-
-        
-
-
-
-
-        this.isAlive$.next(true);
     }
 
     public async addListsToModelIfNameMeetsConditions(conditions: ((a: any) => boolean)[]): Promise<List[]> {
@@ -689,7 +681,6 @@ export class BoardController<T extends BoardModel> {
         writeFileSync(join(process.cwd(), "cache/unlabeled.json"), JSON.stringify(unlabeledCards))
 
         writeFileSync(join(process.cwd(), "cache/model.json"), JSON.stringify(this.boardModel, null, 4));
-
     }
 }
 

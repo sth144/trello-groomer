@@ -1,4 +1,4 @@
-import json as j
+import json
 import re
 import pandas as pd
 import numpy as np
@@ -15,12 +15,12 @@ from sklearn.svm import LinearSVC
 labels = None
 with open("../cache/labels.json") as data_file:
     text = data_file.read()
-    labels = j.loads(text)
+    labels = json.loads(text)
 
 unlabeled_card_names = None
 with open("../cache/unlabeled.json") as data_file:
     text = data_file.read()
-    unlabeled_card_names = j.loads(text)
+    unlabeled_card_names = json.loads(text)
 
 training_data = None
 with open("../cache/label-data.json") as data_file:
@@ -30,7 +30,7 @@ with open("../cache/label-data.json") as data_file:
     for line in lines:
         wrappedlines.append("{" + line + "}")
     joined_lines = "[" + ",".join(wrappedlines) + "]"
-    training_data = j.loads(joined_lines)
+    training_data = json.loads(joined_lines)
 
 data = pd.DataFrame(training_data)
 
@@ -41,6 +41,8 @@ data["cleaned"] = data["name"].apply(
     lambda x: " ".join(
         [stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in words]
     ).lower())
+
+matches = []
 
 for label in labels:
     data["label:"+label] = data["labels"].apply(
@@ -80,9 +82,13 @@ for label in labels:
 
 
         predictions = model.predict(unlabeled_card_names)
-        print("predictions: " + str(predictions))
+        # print("predictions: " + str(predictions))
         i = 0
         for prediction in predictions:
             if prediction != 0:
-                print("match: " + unlabeled_card_names[i])
+                print("match: " + label + " -- " + unlabeled_card_names[i])
+                matches.append({ label: unlabeled_card_names[i] })
             i += 1
+
+print("Results: " + matches)
+json.dump(matches, open("../cache/label.model-output.json", "w+"))

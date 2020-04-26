@@ -6,37 +6,48 @@ import { logger } from "./lib/logger";
 writeFileSync(join(process.cwd(), "cache/pid"), process.pid);
 
 process.on("unhandledRejection", (reason: any, p: Promise<any>) => {
-    console.error(reason);
+    logger.error(reason);
 });
 
-/** node-cron has a bug, reimplemented using setInterval until a better solution is identified */
+const CronJob = require("cron").CronJob;
 
-// TODO: provide a timeout to catch "stuck" runs and abort
+let mainMutex = false, mainJobNo = 0;
 
-let mutex = false, iter = 0, jobNo = 0;
+const mainJob = new CronJob(
+    '0 */5 * * * *', /** time pattern */
+    async () => {
+        logger.info(`************************************`
+                    +` Starting job (${mainJobNo + 1}) ${(new Date()).toLocaleTimeString()}`
+                    +` ***************************************`);
+        if (!mainMutex) {
+            logger.info("Mutex acquired");
+            [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
+            try {
+                const failureTimeout = setTimeout(() => { 
+                    throw new Error("Job timed out"); 
+                }, 2 * 5 * 60 * 10000);
 
-(async function runJob() { 
-    setTimeout(runJob, 5 * 60 * 1000);
-    logger.info(`************************************`
-                +` Starting job (${iter++}) ${(new Date()).toLocaleTimeString()}`
-                +` ***************************************`);
-    if (!mutex) {
-        logger.info("Mutex acquired");
-        [ mutex, jobNo ] = [ true, jobNo + 1 ];
-        try {
-            const f = setTimeout(() => { throw new Error("Job timed out"); }, 2 * 5 * 60 * 10000);
-            const groomer = await ToDoGroomer();
-            await groomer.run();
-            mutex = false;
-            logger.info(`Job finished ${(new Date()).toLocaleTimeString()}, mutex released`);
-            clearTimeout(f);
-        } catch (e) {
-            logger.info(`Run failed: ${e}`);
-            mutex = false;
+                const groomer = ToDoGroomer();
+                await groomer.run();
+                
+                mainMutex = false;
+                logger.info(`Job ${mainJobNo} finished ${(new Date()).toLocaleTimeString()}, mutex released`);
+                clearTimeout(failureTimeout);
+            } catch (e) {
+                logger.info(`Run ${mainJobNo} failed: ${e}`);
+                mainMutex = false;
+            }
+        } else {
+            logger.info(`Job ${mainJobNo} is still running, skipping scheduled run`);
         }
-    } else {
-        logger.info(`Job ${jobNo} is still running, skipping scheduled run`);
-    }
-})()
+    }, /** onTick */
+    null /** onComplete */, 
+    false /** start (?) */, 
+    "America/Chicago" /** time zone */, 
+    this /** context (?) */, 
+    true /** run on init, runs right away, then begins running every 10 min */
+);
+
+mainJob.start();
 
 // TODO: introduce daily, weekly, monthy tasks (when robust enough), replace Trello Butler

@@ -47,20 +47,28 @@ export class ToDoBoardModel extends BoardModel {
  * Factory which returns a groomer object, whose run() method will groom the Trello board
  */
 export const ToDoGroomer = function() {
-    const start = new Date();
-    logger.info("Started " + start.toString());
 
-    logger.info("Building model");
+    let start: Date;
+    let model: ToDoBoardModel;
+    let controller: BoardController<ToDoBoardModel>;
 
-    /** instantiate private data members, board model and controller */
-    const model = new ToDoBoardModel(boards.todo.id)
+    const initialize = async () => {
+        start = new Date();
+        logger.info("Started " + start.toString());
 
-    logger.info("Initializing controller");
+        logger.info("Building model");
+        /** instantiate private data members, board model and controller */
+        model = new ToDoBoardModel(boards.todo.id)
 
-    const controller = new BoardController<ToDoBoardModel>(model, {
-        key: secrets.key,
-        token: secrets.token
-    });
+        logger.info("Initializing controller");
+
+        controller = new BoardController<ToDoBoardModel>(model, {
+            key: secrets.key,
+            token: secrets.token
+        });
+
+        await controller.wakeUp();
+    }
 
     /**
      * groom the board
@@ -68,6 +76,8 @@ export const ToDoGroomer = function() {
      */
     const groom = async () => {
         logger.info("Grooming");
+
+        delete require.cache;
 
         logger.info("Syncing local config JSON files with configuration cards on board");
 
@@ -95,7 +105,30 @@ export const ToDoGroomer = function() {
         }]);
 
 
+
+
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
+        logger.info("Adding labels to unlabeled cards according to machine learning model");
+
+        const { spawn } = require("child_process");
+        const subprocess = spawn("python3", ["label.py"], { cwd: "./model" });
+        subprocess.stdout.on("data", (data: string) => {
+            logger.info(data.toString());
+        });
+        const closed = new Promise((res) => {
+            subprocess.on("close", () => {
+                res();
+            });
+        });
+        await closed;
+
+        console.log("LABELS FROM MODEL");
+        delete require.cache[join(process.cwd(), "cache/label.model-output.json")];
+        console.log(require(join(process.cwd(), "cache/label.model-output.json")))
+
+
+
+        
         // TODO: once model implemented, reconsider how autolabelling occurs
         // TODO: integrate stopwords into the auto-labelling process
 
@@ -138,7 +171,6 @@ export const ToDoGroomer = function() {
 
             logger.info("Updating due dates based on manual list movements");
 
-            // TODO: this no longer seems to work. Fix it!!
             await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
                 wasMovedFromToListFilterFactory(model.lists.backlog.id, [
                     model.lists.month.id,
@@ -241,7 +273,7 @@ export const ToDoGroomer = function() {
 
         historyLists.forEach(async (historyList) => {
             await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
-        })
+        });
 
         // TODO: dump JSON data for card labels to train machine learning model
         controller.dump();
@@ -255,7 +287,7 @@ export const ToDoGroomer = function() {
     /** return the groomer object, exposing the run() method */
     return {
         run: async () => {
-            await controller.isAlive;
+            await initialize();
             await groom();
         }
     }
