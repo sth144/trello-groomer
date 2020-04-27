@@ -25,7 +25,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-          - key: kubernetes/hostname
+          - key: kubernetes.io/hostname
             operator: In
             values:
               - pc2
@@ -40,7 +40,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Mii
+      storage: 5Mi
   selector:
     matchLabels:
       directory: config
