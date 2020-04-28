@@ -1,26 +1,13 @@
-dist: xenial
-language: node_js
-node_js:
-  - "stable"
-arch:
-  - arm64
-  # - amd64
-
 sudo: required
-
 services:
   - docker
-
-# install
-before_install:
-  - docker run --rm --privileged multiarch/qemu-user-static:register
-  - echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
-
-# build
+language: bash
 script:
+  # prepare qemu
+  - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+  - echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
+  # build image
   - docker build -t sthinds/trello-groomer . 
-  # TODO: run tests
-
-# deploy
 after_success:
-  - docker push sthinds/trello-groomer
+  # deploy
+  - docker push sthinds/trello-groomer:qemu
