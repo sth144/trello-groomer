@@ -9,7 +9,7 @@ deploy.sh
 .env
 .dockerignore
 cache/*
-!cache/.gitignore
+!cache/.gitkeep
 .vscode
 log
 !log/.gitkeep

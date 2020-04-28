@@ -1,6 +1,12 @@
 config/**/*
+
 cache/**/*
+!cache/.gitkeep
+
 dist
+
 log
+!log/.gitkeep
+
 node_modules
 .env
