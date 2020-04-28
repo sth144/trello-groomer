@@ -1,8 +1,9 @@
-# language: node_js
-# node_js:
-#   - "stable"
+language: node_js
+node_js:
+  - "stable"
 arch:
   - arm64
+  - amd64
 
 sudo: required
 
@@ -11,6 +12,7 @@ services:
 
 # install
 before_install:
+  - docker run --rm --privileged multiarch/qemu-user-static:register
   - echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
 
 # build
