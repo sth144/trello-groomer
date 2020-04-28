@@ -4,6 +4,7 @@ env:
   global:
     - DOCKER_REPO=sthinds/trello-groomer
 before_install:
+  # TODO: use service instead of this first line? stop and restart?
   - curl -fsSL https://get.docker.com | sh
   - echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
   - mkdir -p $HOME/.docker
@@ -13,9 +14,4 @@ install:
   - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - docker buildx create --name xbuilder --use
 script: 
-  - docker buildx build \
-    --progress plain \
-    --platform=linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le,linux/s390x \
-    -t $DOCKER_REPO:latest \
-    --push \
-    .
+  - docker buildx build --progress plain --platform=linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le,linux/s390x -t $DOCKER_REPO:latest --push .
