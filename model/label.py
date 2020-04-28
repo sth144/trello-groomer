@@ -9,28 +9,32 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.svm import LinearSVC
+from os import path
 
 # TODO: use sklearn's built in neural network support
 
 labels = None
-with open("../cache/labels.json") as data_file:
-    text = data_file.read()
-    labels = json.loads(text)
+if (path.exists("../cache/labels.json")):
+    with open("../cache/labels.json") as data_file:
+        text = data_file.read()
+        labels = json.loads(text)
 
 unlabeled_card_names = None
-with open("../cache/unlabeled.json") as data_file:
-    text = data_file.read()
-    unlabeled_card_names = json.loads(text)
+if (path.exists("../cache/unlabeled.json")):
+    with open("../cache/unlabeled.json") as data_file:
+        text = data_file.read()
+        unlabeled_card_names = json.loads(text)
 
 training_data = None
-with open("../cache/label-data.json") as data_file:
-    text = data_file.read()
-    lines = text.split("[{")[1].split("}]")[0].split("},{")
-    wrappedlines = []
-    for line in lines:
-        wrappedlines.append("{" + line + "}")
-    joined_lines = "[" + ",".join(wrappedlines) + "]"
-    training_data = json.loads(joined_lines)
+if (path.exists("../cache/label-data.json")):
+    with open("../cache/label-data.json") as data_file:
+        text = data_file.read()
+        lines = text.split("[{")[1].split("}]")[0].split("},{")
+        wrappedlines = []
+        for line in lines:
+            wrappedlines.append("{" + line + "}")
+        joined_lines = "[" + ",".join(wrappedlines) + "]"
+        training_data = json.loads(joined_lines)
 
 data = pd.DataFrame(training_data)
 
