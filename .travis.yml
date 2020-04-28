@@ -1,9 +1,10 @@
+dist: xenial
 language: node_js
 node_js:
   - "stable"
 arch:
   - arm64
-  - amd64
+  # - amd64
 
 sudo: required
 
