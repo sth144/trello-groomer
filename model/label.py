@@ -12,7 +12,7 @@ from sklearn.svm import LinearSVC
 from os import path
 
 # TODO: use sklearn's built in neural network support
-
+# TODO: break these parsing operations into their own functions
 labels = None
 if (path.exists("../cache/labels.json")):
     with open("../cache/labels.json") as data_file:
