@@ -124,7 +124,10 @@ export const ToDoGroomer = function() {
 
         console.log("LABELS FROM MODEL");
         delete require.cache[join(process.cwd(), "cache/label.model-output.json")];
-        console.log(require(join(process.cwd(), "cache/label.model-output.json")))
+        if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
+
+            console.log(require(join(process.cwd(), "cache/label.model-output.json")))
+        }
 
 
 
