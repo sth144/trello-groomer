@@ -11,6 +11,7 @@ A Node.js program which will remotely groom Trello board using the Trello API. C
 * get Kubernetes deployment working
 * get rid of deploy.sh and launch.sh
 ### Auto-label
+* is label.py creating any output in Docker image?
 * integrate stopwords into auto-label
 * get rid of auto-label based on single shared word?
 * stemmer
@@ -19,5 +20,7 @@ A Node.js program which will remotely groom Trello board using the Trello API. C
     * get stemming working
     * reconcile with synced config files (merge?)
     * migrate to neural net
+### Due-date Reassignment
+* take into account original due date when calculating new date
 ### Tasks
 * prettify JSON in auto-___.config cards

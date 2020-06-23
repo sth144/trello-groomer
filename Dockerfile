@@ -9,7 +9,6 @@ RUN npm install -g typescript
 RUN npm install
 RUN tsc -p .
 RUN which python3
-RUN python3 -c "print('hey')"
 
 EXPOSE 4500
 CMD ["npm", "start"]

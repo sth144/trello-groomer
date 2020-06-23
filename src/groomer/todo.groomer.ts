@@ -2,7 +2,8 @@ import { BoardModel } from "../model/board.model";
 import { List } from "../lib/list.interface";
 import { BoardController } from "../controller/board.controller";
 import {
-    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, cardHasDueDate, cardDueWithinThreeDays, Not, wasMovedFromToListFilterFactory
+    cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, 
+    cardHasDueDate, cardDueWithinThreeDays, Not, wasMovedFromToListFilterFactory
 } from "../lib/card.filters";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
@@ -27,6 +28,7 @@ export class ToDoBoardModel extends BoardModel {
         day: List;
         done: List;
         pinned: List;
+        backburner: List;
     } = {
         inbox: new List(),
         backlog: new List(),
@@ -35,7 +37,8 @@ export class ToDoBoardModel extends BoardModel {
         tomorrow: new List(),
         day: new List(),
         done: new List(),
-        pinned: new List()
+        pinned: new List(),
+        backburner: new List()
     };
     constructor(id: string) {
         super();
@@ -85,7 +88,7 @@ export const ToDoGroomer = function() {
         await controller.syncConfigJsonWithCard("auto-label.config.json", "Auto-Label Configuration");
         await controller.syncConfigJsonWithCard("auto-link.config.json", "Auto-Link Configuration");
 
-// TODO: how much of this procedure could be batched/parallelized?
+        // TODO: how much of this procedure could be batched/parallelized?
 
         logger.info("Adding history lists from past 12 months to data model");
         /**
@@ -104,9 +107,6 @@ export const ToDoGroomer = function() {
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
 
-
-
-
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
         logger.info("Adding labels to unlabeled cards according to machine learning model");
 
@@ -122,13 +122,19 @@ export const ToDoGroomer = function() {
         });
         await closed;
 
-        console.log("LABELS FROM MODEL");
+
+
+
+console.log("LABELS FROM MODEL");
         if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
-            delete require.cache[join(process.cwd(), "cache/label.model-output.json")];
-
-            console.log(require(join(process.cwd(), "cache/label.model-output.json")))
+            const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
+            if ( require.hasOwnProperty("cache") 
+             &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
+                delete require.cache[labelModelOutputPath]; 
+            }
+            const labelsFromModel = require(join(process.cwd(), "cache/label.model-output.json"));
+console.log(labelsFromModel);
         }
-
 
 
         
@@ -272,11 +278,15 @@ export const ToDoGroomer = function() {
 
         await controller.markCardsInListDone(model.lists.done.id);
 
-        logger.info("Pruning repeat-labeled cards from history lists")
+        logger.info("Pruning repeat-labeled cards from history lists");
 
         historyLists.forEach(async (historyList) => {
             await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
         });
+
+        logger.info("Removing due dates from cards in backburner list");
+        await controller.removeDueDateFromCardsInList(model.lists.backburner.id);
+        // TODO: remove due dates from backburner list
 
         // TODO: dump JSON data for card labels to train machine learning model
         controller.dump();

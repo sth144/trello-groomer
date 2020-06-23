@@ -515,6 +515,14 @@ export class BoardController<T extends BoardModel> {
             }
         });
     }
+    
+    public async removeDueDateFromCardsInList(listId: string): Promise<void> {
+        this.boardModel.getListById(listId).getCards()
+            .filter(card => card.hasOwnProperty("due") && card.due !== null && card.due !== undefined)
+            .forEach(async (card) => {
+                await this.httpClient.asyncPut(`/cards/${card.id}?due=null`);
+            });
+    }
 
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
