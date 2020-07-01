@@ -674,10 +674,27 @@ export class BoardController<T extends BoardModel> {
     }
 
     /** can be used to pass lists from one BoardController to another */
-    public importLists(lists: List[]): void {
+    public importLists(lists: List[], associatedLabels: Record<string, string>): void {
         lists.forEach(list => {
+            list.cards.forEach(x => x.idLabels = this.translateLabels(x.idLabels, associatedLabels))
             this.boardModel.addList(list.name, list);
         });
+    }
+
+    /** lists imported from another board will not share the same label IDs */
+    private translateLabels(inputLabels: string[], inputLabelDict: Record<string, string>): string[] {
+        const result: string[] = [];
+        inputLabels.forEach(inputLabelId => {
+            const allLabels = this.boardModel.getLabels();
+            for (const i in allLabels) {
+                for (const j in inputLabelDict) {
+                    if (inputLabelDict[j] === inputLabelId && i === j) {
+                        result.push(allLabels[i])
+                    }
+                }
+            }
+        });
+        return result;
     }
 
     public dump(): void {

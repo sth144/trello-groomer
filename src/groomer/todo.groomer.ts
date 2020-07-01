@@ -60,7 +60,8 @@ export class HistoryBoardModel extends BoardModel {
 export const ToDoGroomer = function() {
 
     let start: Date;
-    let model: ToDoBoardModel;
+    let todoModel: ToDoBoardModel;
+    let historyModel: HistoryBoardModel;
     let historyController: BoardController<HistoryBoardModel>;
     let todoController: BoardController<ToDoBoardModel>;
 
@@ -70,20 +71,24 @@ export const ToDoGroomer = function() {
 
         logger.info("Building model");
         /** instantiate private data members, board model and controller */
-        model = new ToDoBoardModel(boards.todo.id);
+        todoModel = new ToDoBoardModel(boards.todo.id);
+
+        historyModel = new HistoryBoardModel(boards.history.id);
 
         logger.info("Initializing controller");
 
-        todoController = new BoardController<ToDoBoardModel>(model, {
+        todoController = new BoardController<ToDoBoardModel>(todoModel, {
             key: secrets.key,
             token: secrets.token
         });
-        historyController = new BoardController<HistoryBoardModel>(new HistoryBoardModel(boards.history.id), {
+
+        historyController = new BoardController<HistoryBoardModel>(historyModel, {
             key: secrets.key,
             token: secrets.token
         });
 
         await todoController.wakeUp();
+        await historyController.wakeUp();
     }
 
     /**
@@ -120,7 +125,7 @@ export const ToDoGroomer = function() {
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
 
-        todoController.importLists(historyLists);
+        todoController.importLists(historyLists, historyModel.getLabels());
 
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
         logger.info("Adding labels to unlabeled cards according to machine learning model");
@@ -191,40 +196,40 @@ export const ToDoGroomer = function() {
 
             logger.info("Updating due dates based on manual list movements");
 
-            await todoController.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
-                wasMovedFromToListFilterFactory(model.lists.backlog.id, [
-                    model.lists.month.id,
-                    model.lists.week.id,
-                    model.lists.tomorrow.id,
-                    model.lists.day.id
+            await todoController.assignDueDatesIf(todoModel.lists.backlog.id, autoDueConfig.backlog,
+                wasMovedFromToListFilterFactory(todoModel.lists.backlog.id, [
+                    todoModel.lists.month.id,
+                    todoModel.lists.week.id,
+                    todoModel.lists.tomorrow.id,
+                    todoModel.lists.day.id
                 ]), 7 /** one week of random stagger (unique on per card basis, not per call to assignDueDatesIf */);
-            await todoController.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
-                wasMovedFromToListFilterFactory(model.lists.month.id, [
-                    model.lists.week.id,
-                    model.lists.tomorrow.id,
-                    model.lists.day.id
+            await todoController.assignDueDatesIf(todoModel.lists.month.id, Math.floor(autoDueConfig.month),
+                wasMovedFromToListFilterFactory(todoModel.lists.month.id, [
+                    todoModel.lists.week.id,
+                    todoModel.lists.tomorrow.id,
+                    todoModel.lists.day.id
                 ]));
-            await todoController.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
-                wasMovedFromToListFilterFactory(model.lists.week.id, [
-                    model.lists.tomorrow.id,
-                    model.lists.day.id
+            await todoController.assignDueDatesIf(todoModel.lists.week.id, autoDueConfig.week,
+                wasMovedFromToListFilterFactory(todoModel.lists.week.id, [
+                    todoModel.lists.tomorrow.id,
+                    todoModel.lists.day.id
                 ]));
-            await todoController.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow,
-                wasMovedFromToListFilterFactory(model.lists.tomorrow.id, [
-                    model.lists.day.id
+            await todoController.assignDueDatesIf(todoModel.lists.tomorrow.id, autoDueConfig.tomorrow,
+                wasMovedFromToListFilterFactory(todoModel.lists.tomorrow.id, [
+                    todoModel.lists.day.id
                 ]));
 
 
-            await todoController.assignDueDatesIf(model.lists.day.id, autoDueConfig.day, 
+            await todoController.assignDueDatesIf(todoModel.lists.day.id, autoDueConfig.day, 
                 Not(cardHasDueDate));
-            await todoController.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow, 
+            await todoController.assignDueDatesIf(todoModel.lists.tomorrow.id, autoDueConfig.tomorrow, 
                 Not(cardHasDueDate));
-            await todoController.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
+            await todoController.assignDueDatesIf(todoModel.lists.week.id, autoDueConfig.week,
                 Not(cardHasDueDate)); 
             /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
-            await todoController.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
+            await todoController.assignDueDatesIf(todoModel.lists.month.id, Math.floor(autoDueConfig.month),
                 Not(cardHasDueDate));
-            await todoController.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog, 
+            await todoController.assignDueDatesIf(todoModel.lists.backlog.id, autoDueConfig.backlog, 
                 Not(cardHasDueDate));
 
         }
@@ -242,52 +247,52 @@ export const ToDoGroomer = function() {
 
         /** move completed items to Done */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id,
-            model.lists.backlog.id,
-            model.lists.month.id,
-            model.lists.week.id,
-            model.lists.tomorrow.id,
-            model.lists.day.id
-        ], model.lists.done.id, cardIsComplete);
+            todoModel.lists.inbox.id,
+            todoModel.lists.backlog.id,
+            todoModel.lists.month.id,
+            todoModel.lists.week.id,
+            todoModel.lists.tomorrow.id,
+            todoModel.lists.day.id
+        ], todoModel.lists.done.id, cardIsComplete);
 
         /** move cards due today to Today */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id,
-            model.lists.backlog.id,
-            model.lists.month.id,
-            model.lists.week.id,
-            model.lists.tomorrow.id,
-        ], model.lists.day.id, cardDueToday);
+            todoModel.lists.inbox.id,
+            todoModel.lists.backlog.id,
+            todoModel.lists.month.id,
+            todoModel.lists.week.id,
+            todoModel.lists.tomorrow.id,
+        ], todoModel.lists.day.id, cardDueToday);
 
         /** move cards due tomorrow (or day after) to Tomorrow */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id,
-            model.lists.backlog.id,
-            model.lists.month.id,
-            model.lists.week.id,
-        ], model.lists.tomorrow.id, cardDueWithinThreeDays);
+            todoModel.lists.inbox.id,
+            todoModel.lists.backlog.id,
+            todoModel.lists.month.id,
+            todoModel.lists.week.id,
+        ], todoModel.lists.tomorrow.id, cardDueWithinThreeDays);
 
         /** move cards due this week to Week */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id,
-            model.lists.backlog.id,
-            model.lists.month.id,
-        ], model.lists.week.id, cardDueThisWeek);
+            todoModel.lists.inbox.id,
+            todoModel.lists.backlog.id,
+            todoModel.lists.month.id,
+        ], todoModel.lists.week.id, cardDueThisWeek);
 
         /** move cards due this month to month */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id,
-            model.lists.backlog.id,
-        ], model.lists.month.id, cardDueThisMonth);
+            todoModel.lists.inbox.id,
+            todoModel.lists.backlog.id,
+        ], todoModel.lists.month.id, cardDueThisMonth);
 
         /** move all cards in inbox with due date to backlog */
         await todoController.moveCardsFromToIf([
-            model.lists.inbox.id
-        ], model.lists.backlog.id, cardHasDueDate);
+            todoModel.lists.inbox.id
+        ], todoModel.lists.backlog.id, cardHasDueDate);
 
         logger.info("Marking appropriate items done");
 
-        await todoController.markCardsInListDone(model.lists.done.id);
+        await todoController.markCardsInListDone(todoModel.lists.done.id);
 
         logger.info("Pruning repeat-labeled cards from history lists");
 
@@ -296,7 +301,7 @@ export const ToDoGroomer = function() {
         });
 
         logger.info("Removing due dates from cards in backburner list");
-        await todoController.removeDueDateFromCardsInList(model.lists.backburner.id);
+        await todoController.removeDueDateFromCardsInList(todoModel.lists.backburner.id);
 
         // TODO: dump JSON data for card labels to train machine learning model
         todoController.dump();

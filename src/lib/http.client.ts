@@ -64,7 +64,7 @@ export class TrelloHttpClient {
     public async asyncPost(url: string, opts: any): Promise<any> {
         this.numRequestsSent++;
 
-        logger.info(`POST ${url}`);
+        logger.info(`POST ${url} ${JSON.stringify(opts)}`);
 
         return new Promise((resolve, reject) => {
             let params = "";
