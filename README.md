@@ -1,4 +1,7 @@
 # trello-groomer
+
+https://travis-ci.com/sth144/trello-groomer.svg?branch=master
+
 A Node.js program which will remotely groom Trello board using the Trello API. Can be run as a cron-job to continuously groom the trello board. Available operations include:
  * Auto-label cards based on title
  * Auto-link related cards based on title

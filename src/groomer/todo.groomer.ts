@@ -69,19 +69,16 @@ export const ToDoGroomer = function() {
         start = new Date();
         logger.info("Started " + start.toString());
 
-        logger.info("Building model");
+        logger.info("Building models");
         /** instantiate private data members, board model and controller */
         todoModel = new ToDoBoardModel(boards.todo.id);
-
         historyModel = new HistoryBoardModel(boards.history.id);
 
-        logger.info("Initializing controller");
-
+        logger.info("Initializing controllers");
         todoController = new BoardController<ToDoBoardModel>(todoModel, {
             key: secrets.key,
             token: secrets.token
         });
-
         historyController = new BoardController<HistoryBoardModel>(historyModel, {
             key: secrets.key,
             token: secrets.token
@@ -239,9 +236,6 @@ export const ToDoGroomer = function() {
             require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
         );
         // TODO: instead of ignoreWords, could use a stopwords library?
-
-
-
 
         logger.info("Updating list placements");
 
