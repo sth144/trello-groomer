@@ -146,7 +146,7 @@ export const ToDoGroomer = function() {
             const labelsFromModel = require(join(process.cwd(), "cache/label.model-output.json"));
             
             logger.info("LABELS FROM MODEL");
-            logger.info(labelsFromModel);
+            logger.info(JSON.stringify(labelsFromModel));
         }
 
         // TODO: once model implemented, reconsider how autolabelling occurs
