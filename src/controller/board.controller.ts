@@ -584,7 +584,7 @@ export class BoardController<T extends BoardModel> {
          * get all lists on board, map to lists specified on BoardModel
          */
         this.allListsOnBoard = await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
-        const modelListsHandle = this.boardModel.getLists() as any;
+        const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
 
         for (const responseList of this.allListsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
@@ -638,6 +638,7 @@ export class BoardController<T extends BoardModel> {
                 Object.assign(allLabels, { [label.name]: label.id })
             }
         });
+
         this.boardModel.Labels = allLabels;
     }
 
@@ -669,8 +670,14 @@ export class BoardController<T extends BoardModel> {
             }
         }
 
-        
         return result;
+    }
+
+    /** can be used to pass lists from one BoardController to another */
+    public importLists(lists: List[]): void {
+        lists.forEach(list => {
+            this.boardModel.addList(list.name, list);
+        });
     }
 
     public dump(): void {

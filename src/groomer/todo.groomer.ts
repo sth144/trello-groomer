@@ -46,6 +46,14 @@ export class ToDoBoardModel extends BoardModel {
     }
 }
 
+export class HistoryBoardModel extends BoardModel {
+    lists: Record<string, List> = { };
+    constructor(id: string) {
+        super();
+        this._id = id;
+    }
+}
+
 /**
  * Factory which returns a groomer object, whose run() method will groom the Trello board
  */
@@ -53,7 +61,8 @@ export const ToDoGroomer = function() {
 
     let start: Date;
     let model: ToDoBoardModel;
-    let controller: BoardController<ToDoBoardModel>;
+    let historyController: BoardController<HistoryBoardModel>;
+    let todoController: BoardController<ToDoBoardModel>;
 
     const initialize = async () => {
         start = new Date();
@@ -61,16 +70,20 @@ export const ToDoGroomer = function() {
 
         logger.info("Building model");
         /** instantiate private data members, board model and controller */
-        model = new ToDoBoardModel(boards.todo.id)
+        model = new ToDoBoardModel(boards.todo.id);
 
         logger.info("Initializing controller");
 
-        controller = new BoardController<ToDoBoardModel>(model, {
+        todoController = new BoardController<ToDoBoardModel>(model, {
+            key: secrets.key,
+            token: secrets.token
+        });
+        historyController = new BoardController<HistoryBoardModel>(new HistoryBoardModel(boards.history.id), {
             key: secrets.key,
             token: secrets.token
         });
 
-        await controller.wakeUp();
+        await todoController.wakeUp();
     }
 
     /**
@@ -84,9 +97,9 @@ export const ToDoGroomer = function() {
 
         logger.info("Syncing local config JSON files with configuration cards on board");
 
-        await controller.syncConfigJsonWithCard("auto-due.config.json", "Auto-Due Configuration");
-        await controller.syncConfigJsonWithCard("auto-label.config.json", "Auto-Label Configuration");
-        await controller.syncConfigJsonWithCard("auto-link.config.json", "Auto-Link Configuration");
+        await todoController.syncConfigJsonWithCard("auto-due.config.json", "Auto-Due Configuration");
+        await todoController.syncConfigJsonWithCard("auto-label.config.json", "Auto-Label Configuration");
+        await todoController.syncConfigJsonWithCard("auto-link.config.json", "Auto-Link Configuration");
 
         // TODO: how much of this procedure could be batched/parallelized?
 
@@ -97,7 +110,7 @@ export const ToDoGroomer = function() {
          */
         const yearnum = start.getFullYear() ;
         const monthnum = start.getMonth();
-        const historyLists = await controller.addListsToModelIfNameMeetsConditions([(x: List) => {
+        const historyLists = await historyController.addListsToModelIfNameMeetsConditions([(x: List) => {
             return x.name.match(DateRegexes.MonthYear) !== null;
         }, (x: List) => {        
             /** if list in current calendar year */
@@ -106,6 +119,8 @@ export const ToDoGroomer = function() {
                 || (x.name.indexOf((yearnum - 1).toString()) !== -1 
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
+
+        todoController.importLists(historyLists);
 
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
         logger.info("Adding labels to unlabeled cards according to machine learning model");
@@ -122,10 +137,6 @@ export const ToDoGroomer = function() {
         });
         await closed;
 
-
-
-
-console.log("LABELS FROM MODEL");
         if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
             const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
             if ( require.hasOwnProperty("cache") 
@@ -133,22 +144,22 @@ console.log("LABELS FROM MODEL");
                 delete require.cache[labelModelOutputPath]; 
             }
             const labelsFromModel = require(join(process.cwd(), "cache/label.model-output.json"));
-console.log(labelsFromModel);
+            
+            logger.info("LABELS FROM MODEL");
+            logger.info(labelsFromModel);
         }
 
-
-        
         // TODO: once model implemented, reconsider how autolabelling occurs
         // TODO: integrate stopwords into the auto-labelling process
 
         /** auto-label cards based on titles */
         logger.info("Adding labels according to keywords in card titles");
         
-        controller.AllLabelNames
+        todoController.AllLabelNames
             /** work keyword conflicts with a lot of irrelevant card titles */
             .filter(x => x !== "Work")
             .forEach(async (labelName) => {
-                await controller.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
+                await todoController.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
             });
         
         const autoLabelConfigPath = join(process.cwd(), "config/auto-label.config.json");
@@ -156,7 +167,7 @@ console.log(labelsFromModel);
             const autoLabelConfig = require(autoLabelConfigPath);
 
             Object.keys(autoLabelConfig).forEach(async (labelName) => {
-                await controller.addLabelToCardsInListIfTitleContains(labelName, autoLabelConfig[labelName]);
+                await todoController.addLabelToCardsInListIfTitleContains(labelName, autoLabelConfig[labelName]);
             });
         }
 
@@ -166,12 +177,12 @@ console.log(labelsFromModel);
          * groom checklists
          *  - update task and prep dependencies, generate followups
          */
-        await controller.updateTaskDependencies("Tasks", /** ignore (necessary?) */ historyLists);
-        await controller.updatePrepDependencies("Prep", /** ignore (necessary?) */ historyLists);
-        await controller.updateFollowupDependencies("Followup", /** ignore (necessary?) */ historyLists);
+        await todoController.updateTaskDependencies("Tasks", /** ignore (necessary?) */ historyLists);
+        await todoController.updatePrepDependencies("Prep", /** ignore (necessary?) */ historyLists);
+        await todoController.updateFollowupDependencies("Followup", /** ignore (necessary?) */ historyLists);
 
-        await controller.markCardsDoneIfLinkedCheckItemsDone();
-        await controller.parseDueDatesFromCardNames();
+        await todoController.markCardsDoneIfLinkedCheckItemsDone();
+        await todoController.parseDueDatesFromCardNames();
 
         /** assign due dates to cards without due dates */
         const autoDueConfigPath = join(process.cwd(), "config/auto-due.config.json");
@@ -180,46 +191,46 @@ console.log(labelsFromModel);
 
             logger.info("Updating due dates based on manual list movements");
 
-            await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
+            await todoController.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog,
                 wasMovedFromToListFilterFactory(model.lists.backlog.id, [
                     model.lists.month.id,
                     model.lists.week.id,
                     model.lists.tomorrow.id,
                     model.lists.day.id
                 ]), 7 /** one week of random stagger (unique on per card basis, not per call to assignDueDatesIf */);
-            await controller.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
+            await todoController.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
                 wasMovedFromToListFilterFactory(model.lists.month.id, [
                     model.lists.week.id,
                     model.lists.tomorrow.id,
                     model.lists.day.id
                 ]));
-            await controller.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
+            await todoController.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
                 wasMovedFromToListFilterFactory(model.lists.week.id, [
                     model.lists.tomorrow.id,
                     model.lists.day.id
                 ]));
-            await controller.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow,
+            await todoController.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow,
                 wasMovedFromToListFilterFactory(model.lists.tomorrow.id, [
                     model.lists.day.id
                 ]));
 
 
-            await controller.assignDueDatesIf(model.lists.day.id, autoDueConfig.day, 
+            await todoController.assignDueDatesIf(model.lists.day.id, autoDueConfig.day, 
                 Not(cardHasDueDate));
-            await controller.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow, 
+            await todoController.assignDueDatesIf(model.lists.tomorrow.id, autoDueConfig.tomorrow, 
                 Not(cardHasDueDate));
-            await controller.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
+            await todoController.assignDueDatesIf(model.lists.week.id, autoDueConfig.week,
                 Not(cardHasDueDate)); 
             /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
-            await controller.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
+            await todoController.assignDueDatesIf(model.lists.month.id, Math.floor(autoDueConfig.month),
                 Not(cardHasDueDate));
-            await controller.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog, 
+            await todoController.assignDueDatesIf(model.lists.backlog.id, autoDueConfig.backlog, 
                 Not(cardHasDueDate));
 
         }
 
         /** auto-link cards which share a label and a common word (>= 3 letters) in title */
-        await controller.autoLinkRelatedCards(
+        await todoController.autoLinkRelatedCards(
             require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
         );
         // TODO: instead of ignoreWords, could use a stopwords library?
@@ -230,7 +241,7 @@ console.log(labelsFromModel);
         logger.info("Updating list placements");
 
         /** move completed items to Done */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id,
             model.lists.backlog.id,
             model.lists.month.id,
@@ -240,7 +251,7 @@ console.log(labelsFromModel);
         ], model.lists.done.id, cardIsComplete);
 
         /** move cards due today to Today */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id,
             model.lists.backlog.id,
             model.lists.month.id,
@@ -249,7 +260,7 @@ console.log(labelsFromModel);
         ], model.lists.day.id, cardDueToday);
 
         /** move cards due tomorrow (or day after) to Tomorrow */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id,
             model.lists.backlog.id,
             model.lists.month.id,
@@ -257,44 +268,43 @@ console.log(labelsFromModel);
         ], model.lists.tomorrow.id, cardDueWithinThreeDays);
 
         /** move cards due this week to Week */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id,
             model.lists.backlog.id,
             model.lists.month.id,
         ], model.lists.week.id, cardDueThisWeek);
 
         /** move cards due this month to month */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id,
             model.lists.backlog.id,
         ], model.lists.month.id, cardDueThisMonth);
 
         /** move all cards in inbox with due date to backlog */
-        await controller.moveCardsFromToIf([
+        await todoController.moveCardsFromToIf([
             model.lists.inbox.id
         ], model.lists.backlog.id, cardHasDueDate);
 
         logger.info("Marking appropriate items done");
 
-        await controller.markCardsInListDone(model.lists.done.id);
+        await todoController.markCardsInListDone(model.lists.done.id);
 
         logger.info("Pruning repeat-labeled cards from history lists");
 
         historyLists.forEach(async (historyList) => {
-            await controller.deleteCardsInListIfLabeled(historyList.id, "Recurring")
+            await historyController.deleteCardsInListIfLabeled(historyList.id, "Recurring")
         });
 
         logger.info("Removing due dates from cards in backburner list");
-        await controller.removeDueDateFromCardsInList(model.lists.backburner.id);
-        // TODO: remove due dates from backburner list
+        await todoController.removeDueDateFromCardsInList(model.lists.backburner.id);
 
         // TODO: dump JSON data for card labels to train machine learning model
-        controller.dump();
+        todoController.dump();
 
         const curTime = new Date();
         const runtime = (curTime.getTime() - start.getTime()) / 1000;
 
-        logger.info(`Sent ${controller.NumRequests} requests in ${runtime} seconds`);
+        logger.info(`Sent ${todoController.NumRequests} requests in ${runtime} seconds`);
     }
 
     /** return the groomer object, exposing the run() method */

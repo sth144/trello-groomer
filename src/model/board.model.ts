@@ -98,4 +98,9 @@ export class BoardModel {
     getLabels() {
         return this.labels;
     }
+    addList(listName: string, list: List) {
+        Object.assign(this.lists, {
+            [listName]: list
+        });
+    }
 }
