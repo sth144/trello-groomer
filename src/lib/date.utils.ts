@@ -33,9 +33,13 @@ export function getNextWeekDay(dayOfWeek: Weekday): Date {
 }
 
 export function getNDaysFromNow(n: number): Date {
-    const date = new Date();
-    date.setDate(date.getDate() + n);
-    return date;
+    return getNDaysFromDate(n, new Date());
+}
+
+export function getNDaysFromDate(n: number, date: Date): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + n);
+    return result;
 }
 
 export function getRemnDaysInWeek(): number {
@@ -60,6 +64,19 @@ export function getRemnDaysInYear(): number {
 export function diffBtwnDatesInDays(date1: Date, date2: Date) {
     return Math.round(((+date1)-(+date2))/(1000*60*60*24));
 }
+
+export function getMidPointBetweenDates(date1: Date, date2: Date): Date {
+    const diff = diffBtwnDatesInDays(date1, date2);
+    const midPointOffset = Math.abs(diff / 2);
+    let earlierOfInputs: Date;
+    if (+date1 < +date2) {
+        earlierOfInputs = date1;
+    } else {
+        earlierOfInputs = date2;
+    }
+    return getNDaysFromDate(midPointOffset, earlierOfInputs);
+}
+
 
 /**
  * RegEx's used to parse date, day, and time info from card titles

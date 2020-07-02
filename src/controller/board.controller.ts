@@ -7,7 +7,7 @@ import { List } from "../lib/list.interface";
 import { Checklist, CheckItem } from "../lib/checklist.interface";
 import { ReplaySubject} from "rxjs";
 import { first } from "rxjs/operators";
-import { getNDaysFromNow, parseDueDate } from '../lib/date.utils';
+import { getNDaysFromNow, parseDueDate, getMidPointBetweenDates } from '../lib/date.utils';
 import { logger } from "../lib/logger";
 import { writeFileSync, existsSync } from "fs";
 import { 
@@ -364,14 +364,39 @@ export class BoardController<T extends BoardModel> {
         }
 
         const batch: Promise<any>[] = [];
-        this.boardModel.getListById(listId).getCards()
-            .filter(conditionFilter)
-            .map((card) => {
-                const newDueDate = createDueDate();
-                logger.info(`Assigning due date to ${card.name}: ${newDueDate}`);
-                batch.push(this.httpClient.asyncPut(`/cards/${card.id}?due=${newDueDate}`));
-                card.due = newDueDate.toUTCString();
-            });
+
+        const targetListCards = this.boardModel.getListById(listId).cards;
+
+        for (let i = 0; i < targetListCards.length; i++) {
+            if (conditionFilter(targetListCards[i])) {
+                if (i > 0 && i < targetListCards.length - 1) {
+                    const card = targetListCards[i];
+                    const cardAbove = targetListCards[i - 1];
+                    const cardBelow = targetListCards[i + 1];
+
+                    let newDueDate: Date;
+
+                    if (cardAbove.hasOwnProperty("due") 
+                     && cardAbove.due !== null 
+                     && cardAbove.due !== undefined
+                     && cardBelow.hasOwnProperty("due")
+                     && cardBelow.due !== null 
+                     && cardBelow.due !== undefined) {
+                        /** 
+                         * if placed in between two cards with due dates, use the average 
+                         *  of these two due dates 
+                         */
+                        newDueDate = getMidPointBetweenDates(new Date(cardAbove.due), 
+                                                             new Date(cardBelow.due));
+                    } else {
+                        newDueDate = createDueDate();
+                    }
+                    logger.info(`Assigning due date to ${card.name}: ${newDueDate}`);
+                    batch.push(this.httpClient.asyncPut(`/cards/${card.id}?due=${newDueDate}`));
+                    card.due = newDueDate.toUTCString();
+                }
+            }
+        }
 
         await Promise.all(batch);
     }
