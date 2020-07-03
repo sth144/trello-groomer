@@ -369,12 +369,12 @@ export class BoardController<T extends BoardModel> {
 
         for (let i = 0; i < targetListCards.length; i++) {
             if (conditionFilter(targetListCards[i])) {
+                let newDueDate: Date = null;
+                const card = targetListCards[i];
+
                 if (i > 0 && i < targetListCards.length - 1) {
-                    const card = targetListCards[i];
                     const cardAbove = targetListCards[i - 1];
                     const cardBelow = targetListCards[i + 1];
-
-                    let newDueDate: Date;
 
                     if (cardAbove.hasOwnProperty("due") 
                      && cardAbove.due !== null 
@@ -388,13 +388,17 @@ export class BoardController<T extends BoardModel> {
                          */
                         newDueDate = getMidPointBetweenDates(new Date(cardAbove.due), 
                                                              new Date(cardBelow.due));
-                    } else {
-                        newDueDate = createDueDate();
-                    }
-                    logger.info(`Assigning due date to ${card.name}: ${newDueDate}`);
-                    batch.push(this.httpClient.asyncPut(`/cards/${card.id}?due=${newDueDate}`));
-                    card.due = newDueDate.toUTCString();
+                    } 
+                } 
+                
+                /** if not assigned above (card is not between two cards with due dates) */
+                if (newDueDate === null) {
+                    newDueDate = createDueDate();
                 }
+
+                logger.info(`Assigning due date to ${card.name}: ${newDueDate}`);
+                batch.push(this.httpClient.asyncPut(`/cards/${card.id}?due=${newDueDate}`));
+                card.due = newDueDate.toUTCString();
             }
         }
 
@@ -707,8 +711,7 @@ export class BoardController<T extends BoardModel> {
             const copiedListWithTranslatedLabels: List = Object.assign(new List(), fromList);
 
             fromList.cards.forEach(x => {
-                const cardCopy = Object.assign<unknown, ICard>({ }, x) as ICard;
-                cardCopy.idLabels = this.translateLabels(x.idLabels, fromController.boardModel.getLabels());
+                x.idLabels = this.translateLabels(x.idLabels, fromController.boardModel.getLabels());
             });
 
             result.push(copiedListWithTranslatedLabels)
