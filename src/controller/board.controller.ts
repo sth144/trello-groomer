@@ -349,6 +349,15 @@ export class BoardController<T extends BoardModel> {
         }
     }
 
+    /**
+     * assign due dates to all cards in list meating a condition filter
+     * @param listId target list
+     * @param dueInDays number of days in the future to assign due date. Only used if card not placed
+     *                  between two existing cards with due dates (in that case, the midpoint between
+     *                  those due dates will be used)
+     * @param conditionFilter assign due dates for all cards in list meeting condition
+     * @param randomStagger random number of days by which to modify each due date
+     */
     public async assignDueDatesIf(
         listId: string, dueInDays: number, conditionFilter: (card: ICard) => boolean, randomStagger: number = null
     ) : Promise<void> {
