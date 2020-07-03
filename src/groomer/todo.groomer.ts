@@ -112,7 +112,7 @@ export const ToDoGroomer = function() {
          */
         const yearnum = start.getFullYear() ;
         const monthnum = start.getMonth();
-        const historyLists = await historyController.addListsToModelIfNameMeetsConditions([(x: List) => {
+        await historyController.addListsToModelIfNameMeetsConditions([(x: List) => {
             return x.name.match(DateRegexes.MonthYear) !== null;
         }, (x: List) => {        
             /** if list in current calendar year */
@@ -122,7 +122,7 @@ export const ToDoGroomer = function() {
                     && getMonthNumFromAbbrev(x.name.substring(0,3)) > monthnum) 
         }]);
 
-        todoController.importLists(historyLists, historyModel.getLabels());
+        const historyLists = todoController.importListsFromController(historyController);
 
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
         logger.info("Adding labels to unlabeled cards according to machine learning model");
