@@ -1,3 +1,4 @@
+wheel
 numpy
 scikit-learn
 pandas
