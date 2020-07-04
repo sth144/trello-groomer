@@ -132,6 +132,9 @@ export const ToDoGroomer = function() {
         subprocess.stdout.on("data", (data: string) => {
             logger.info(data.toString());
         });
+        subprocess.stderr.on("data", (err: string) => {
+            logger.info(err.toString());
+        });
         const closed = new Promise((res) => {
             subprocess.on("close", () => {
                 res();
