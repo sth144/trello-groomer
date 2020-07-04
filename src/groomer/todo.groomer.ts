@@ -140,7 +140,7 @@ export const ToDoGroomer = function() {
         await closed;
 
         logger.info(`Cache contents: ${readdirSync("./cache")}`);
-        
+
         if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
             const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
             if ( require.hasOwnProperty("cache") 
@@ -149,7 +149,7 @@ export const ToDoGroomer = function() {
             }
             const labelsFromModel = require(join(process.cwd(), "cache/label.model-output.json"));
             
-            logger.info("LABELS FROM MODEL");
+            logger.info("Labels from ML model:");
             logger.info(JSON.stringify(labelsFromModel));
         }
 
