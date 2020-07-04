@@ -8,7 +8,7 @@ import {
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { logger } from "../lib/logger";
 const secrets = require("../../config/key.json");
 const boards = require("../../config/boards.json");
@@ -139,6 +139,8 @@ export const ToDoGroomer = function() {
         });
         await closed;
 
+        logger.info(`Cache contents: ${readdirSync("./cache")}`);
+        
         if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
             const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
             if ( require.hasOwnProperty("cache") 
@@ -297,7 +299,7 @@ export const ToDoGroomer = function() {
         logger.info("Removing due dates from cards in backburner list");
         await todoController.removeDueDateFromCardsInList(todoModel.lists.backburner.id);
 
-        // TODO: dump JSON data for card labels to train machine learning model
+        logger.info("dump JSON data for card labels to train machine learning model");
         todoController.dump();
 
         const curTime = new Date();
