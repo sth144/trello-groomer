@@ -1,5 +1,5 @@
 FROM node:13-alpine
-RUN apk --no-cache add --virtual native-deps python3
+RUN apk --no-cache add --virtual native-deps python3 build-base
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
