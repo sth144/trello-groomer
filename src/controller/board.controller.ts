@@ -344,6 +344,8 @@ export class BoardController<T extends BoardModel> {
                     [fromListId, toListId].forEach(async (id) => {
                         this.boardModel.getListById(id).cards = await this.httpClient.asyncGet(`/lists/${id}/cards`);
                     });
+
+                    card.idList = toListId;
                 }
             }
         }
