@@ -336,7 +336,7 @@ export class BoardController<T extends BoardModel> {
             const from: List = this.boardModel.getListById(fromListId);
             const fromListCards = from.getCards();
             for (const card of fromListCards) {
-                if (filter(card)) {
+                if (filter(card) && card.idList === fromListId /** this double check may prevent a bug */) {
                     // TODO: this should be encapsulated in a moveCard operation
                     await this.httpClient.asyncPut(`/cards/${card.id}?idList=${toListId}&pos=top`);
 
