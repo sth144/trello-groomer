@@ -8,7 +8,12 @@ COPY . .
 RUN which python3
 RUN pip3 install --upgrade pip
 RUN pip3 install wheel
-RUN pip3 install -r requirements.txt
+# RUN pip3 install -r requirements.txt
+RUN pip3 install numpy
+RUN pip3 install 'scipy<1.4'
+RUN pip3 install pandas
+
+
 
 RUN npm install -g typescript
 RUN npm install
