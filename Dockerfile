@@ -8,7 +8,7 @@ COPY . .
 RUN which python3
 # RUN pip3 install --upgrade pip
 # RUN pip3 install wheel
-# RUN pip3 install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 RUN npm install -g typescript
 RUN npm install
