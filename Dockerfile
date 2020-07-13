@@ -6,12 +6,12 @@ WORKDIR /usr/src/app
 COPY . .
 
 RUN which python3
-RUN pip3 install --upgrade pip
+# RUN pip3 install --upgrade pip
 # RUN pip3 install wheel
 # RUN pip3 install -r requirements.txt
 # RUN pip3 install numpy
 # RUN pip3 install scipy
-RUN pip3 install pandas
+RUN pip install pandas
 # RUN pip3 install scikit-learn
 
 
