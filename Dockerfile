@@ -12,7 +12,7 @@ RUN pip3 install wheel
 RUN pip3 install numpy
 # RUN pip3 install scipy
 RUN pip3 install pandas
-RUN pip3 install scikit-learn
+# RUN pip3 install scikit-learn
 
 
 RUN npm install -g typescript
