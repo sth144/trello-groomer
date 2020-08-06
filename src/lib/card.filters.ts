@@ -11,9 +11,12 @@ export const cardDueToday = (card: ICard) => {
     if (cardHasDueDate(card)) {
         const dueDate = new Date(card.due);
         const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate()+1)
-        return (+dueDate < +tomorrow); 
+
+        const midnightTonight = new Date();
+        midnightTonight.setDate(today.getDate()+1);
+        midnightTonight.setHours(0, 0, 0, 0);
+        
+        return (+dueDate < +midnightTonight); 
     } return false;
 }
 
