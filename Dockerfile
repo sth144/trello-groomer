@@ -11,7 +11,7 @@ RUN which python3
 # RUN pip3 install -r requirements.txt
 # RUN pip3 install numpy
 # RUN pip3 install scipy
-RUN pip install pandas
+# RUN pip install pandas
 # RUN pip3 install scikit-learn
 
 
