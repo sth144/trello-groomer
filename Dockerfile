@@ -19,5 +19,7 @@ RUN npm install -g typescript
 RUN npm install
 RUN tsc -p .
 
+RUN npm run test
+
 EXPOSE 4500
-CMD ["npm", "start"]
+CMD ["npm", "start"] 
