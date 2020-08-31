@@ -17,7 +17,7 @@ const mainJob = new CronJob(
     '0 */5 * * * *', /** time pattern */
     async () => {
         logger.info(`************************************`
-                    +` Starting job (${mainJobNo + 1}) ${(new Date()).toLocaleTimeString()}`
+                    +` Starting job (${mainJobNo + 1}) ${(new Date()).toString()}`
                     +` ***************************************`);
         if (!mainMutex) {
             logger.info("Mutex acquired");
