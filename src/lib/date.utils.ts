@@ -186,8 +186,10 @@ export function parseDueDate(inputStr: string, defaultDue: string)
         }
     }
     
-    logger.debug(`Parsed due date from ${processedInput}: ${dueDate}`);
-    
+    if (dueDate !== null) {
+        logger.info(`Parsed due date from ${processedInput}: ${dueDate}`);
+    }
+
     return {
         processedInputStr: processedInput,
         dueDateStr: dueDate
