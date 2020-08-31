@@ -149,7 +149,12 @@ spec:
           volumeMounts: 
             - name: trello-groomer-config-volume
               mountPath: /usr/src/app/config
+            - name: trello-groomer-timezone
+              mountPath: /etc/localtime
       volumes:
         - name: trello-groomer-config-volume
           persistentVolumeClaim:
             claimName: trello-groomer-config-claim
+        - name: trello-groomer-timezone
+          hostPath:
+            path: /usr/share/zoneinfo/America/Chicago
