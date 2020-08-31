@@ -185,7 +185,9 @@ export function parseDueDate(inputStr: string, defaultDue: string)
             processedInput = inputStr.replace(DateRegexes.DayNameTime, "");
         }
     }
-
+    
+    logger.debug(`Parsed due date from ${processedInput}: ${dueDate}`);
+    
     return {
         processedInputStr: processedInput,
         dueDateStr: dueDate
