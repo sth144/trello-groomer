@@ -3,7 +3,7 @@ import { List } from "../lib/list.interface";
 import { BoardController } from "../controller/board.controller";
 import {
     cardIsComplete, cardDueToday, cardDueThisWeek, cardDueThisMonth, 
-    cardHasDueDate, cardDueWithinThreeDays, Not, wasMovedFromToListFilterFactory
+    cardHasDueDate, cardDueWithinTwoDays, Not, wasMovedFromToListFilterFactory
 } from "../lib/card.filters";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
@@ -269,7 +269,7 @@ export const ToDoGroomer = function() {
             todoModel.lists.backlog.id,
             todoModel.lists.month.id,
             todoModel.lists.week.id,
-        ], todoModel.lists.tomorrow.id, cardDueWithinThreeDays);
+        ], todoModel.lists.tomorrow.id, cardDueWithinTwoDays);
 
         /** move cards due this week to Week */
         await todoController.moveCardsFromToIf([
