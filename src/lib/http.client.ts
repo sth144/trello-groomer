@@ -30,7 +30,7 @@ export class TrelloHttpClient {
                     result = JSON.parse(body)
                     resolve(result);
                 } catch(e) {
-    console.log("GET ERR");
+
                     logger.error(`${err} ${e} ${JSON.stringify(response)}`);
                     reject(e);
                 }
@@ -56,7 +56,6 @@ export class TrelloHttpClient {
                     resolve(result);
                 } catch(e) {
 
-    console.log("PUT ERR");
                     logger.error(`${err} ${e} ${JSON.stringify(response)}`);
                     reject(e);
                 }
@@ -85,7 +84,6 @@ export class TrelloHttpClient {
                     result = JSON.parse(body)
                     resolve(result);
                 } catch(e) {
-console.log("POST ERR");
 
                     logger.error(`${err} ${e} ${JSON.stringify(response)}`);
                     reject(e);
