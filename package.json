@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "npm install && tsc -p .",
-    "start": "node dist/index.js",
+    "start": "npm run start-todo-groomer",
+    "start-todo-groomer": "node dist/index.js todo",
+    "start-work-groomer": "node dist/index.js work",
     "test": "mocha --exit --require ts-node/register src/**/*.spec.ts",
     "deploy": "bash ./deploy.sh"
   },

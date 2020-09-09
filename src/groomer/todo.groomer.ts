@@ -93,7 +93,7 @@ export const ToDoGroomer = function() {
      *  NOTE: order is important here, do not change order without careful consideration
      */
     const groom = async () => {
-        logger.info("Grooming");
+        logger.info("Grooming (ToDo)");
 
         delete require.cache;
 

@@ -1,4 +1,4 @@
-FROM node:13-alpine
+FROM node:13-alpine AS base
 RUN apk --no-cache add --virtual native-deps python3 python3-dev build-base
 
 RUN mkdir -p /usr/src/app
@@ -22,4 +22,9 @@ RUN tsc -p .
 RUN npm run test
 
 EXPOSE 4500
-CMD ["npm", "start"] 
+
+FROM base as todo
+CMD ["npm", "run", "start-todo-groomer"]
+
+FROM base as work
+CMD ["npm", "run", "start-work-groomer"]

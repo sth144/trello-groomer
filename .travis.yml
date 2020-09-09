@@ -17,4 +17,5 @@ install:
   # TODO: what is this? necessary?
   - docker buildx create --name xbuilder --use
 script: 
-  - docker buildx build --progress plain --platform=$ARCHITECTURE_TARGETS -t $DOCKER_REPO:latest --push .
+  - docker buildx build --progress plain --platform=$ARCHITECTURE_TARGETS -t $DOCKER_REPO:todo --push .
+  - docker buildx build --progress plain --platform=$ARCHITECTURE_TARGETS -t $DOCKER_REPO:work --push .

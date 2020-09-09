@@ -1,5 +1,10 @@
 const winston = require("winston");
 
+let logfileIdentifier = "";
+if (process.argv.length >= 3) {
+    logfileIdentifier = process.argv[2];
+}
+
 export const logger = winston.createLogger({            
     transports: [
         /**
@@ -7,7 +12,7 @@ export const logger = winston.createLogger({
          */
         new winston.transports.File({
             level: "info",
-            filename: "log/info.log",
+            filename: `log/info.${logfileIdentifier}.log`,
             handleExceptions: true,
             format: winston.format.printf(({ message }: { message: string }) => {
                 if (message !== undefined && message.hasOwnProperty("replace")) {

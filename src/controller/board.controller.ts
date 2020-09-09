@@ -566,7 +566,9 @@ export class BoardController<T extends BoardModel> {
 
     public async parseDueDatesFromCardNames(): Promise<void> {
         for (const card of this.boardModel.getAllCards()) {
-            let parsedResult = parseDueDate(card.name, null), dueDate, parsedName;
+            let parsedResult = parseDueDate(card.name, null), 
+                dueDate, 
+                parsedName;
             if (card.due === null
                 && ((dueDate = parsedResult.dueDateStr) !== null)
                 && ((parsedName = parsedResult.processedInputStr) !== null)) {
