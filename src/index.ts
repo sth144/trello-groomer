@@ -59,7 +59,7 @@ switch (whichGroomer) {
             this /** context (?) */, 
             true /** run on init, runs right away, then begins running every 10 min */
         );
-        
+
         workJob.start();
         break;
     }

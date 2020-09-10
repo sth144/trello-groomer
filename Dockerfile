@@ -1,4 +1,4 @@
-FROM node:13-alpine AS base
+FROM node:13-alpine
 RUN apk --no-cache add --virtual native-deps python3 python3-dev build-base
 
 RUN mkdir -p /usr/src/app
@@ -23,9 +23,7 @@ RUN npm run test
 
 EXPOSE 4500
 
-# TODO: just pass an arg instead of using two images?...
-FROM base as todo
-CMD ["npm", "run", "start-todo-groomer"]
+ARG WHICH_GROOMER="start-todo-groomer"
+ENV WHICH_GROOMER=${WHICH_GROOMER}
 
-FROM base as work
-CMD ["npm", "run", "start-work-groomer"]
+CMD ["npm", "run", ${WHICH_GROOMER}]
