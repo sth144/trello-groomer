@@ -23,4 +23,4 @@ RUN npm run test
 
 EXPOSE 4500
 
-CMD ["npm", "run", "${WHICH_GROOMER}"]
+CMD ["npm", "run", "echo ${WHICH_GROOMER}"]
