@@ -168,4 +168,48 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trello-groomer-work
+  labels:
+    app: trello-groomer-work
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trello-groomer-work
+  template:
+    metadata:
+      labels:
+        app: trello-groomer-work
+        name: trello-groomer-work
+    spec:
+      containers:
+        - name: trello-groomer-work
+          image: sthinds/trello-groomer:work
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: trello-groomer-config-volume
+              mountPath: /usr/src/app/config
+            - name: trello-groomer-cache-volume
+              mountPath: /usr/src/app/cache
+            - name: trello-groomer-log-volume
+              mountPath: /usr/src/app/log
+            - name: trello-groomer-timezone
+              mountPath: /etc/localtime
+      volumes:
+        - name: trello-groomer-config-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-config-claim
+        - name: trello-groomer-cache-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-cache-claim
+        - name: trello-groomer-log-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-log-claim
+        - name: trello-groomer-timezone
+          hostPath:
+            path: /usr/share/zoneinfo/America/Chicago
 # TODO: deployment for work

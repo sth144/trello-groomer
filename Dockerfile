@@ -23,6 +23,7 @@ RUN npm run test
 
 EXPOSE 4500
 
+# TODO: just pass an arg instead of using two images?...
 FROM base as todo
 CMD ["npm", "run", "start-todo-groomer"]
 
