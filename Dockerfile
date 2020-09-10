@@ -25,4 +25,4 @@ EXPOSE 4500
 
 ARG WHICH_GROOMER
 
-CMD ["sh", "-c", "\"npm run $(echo ${WHICH_GROOMER})\""]
+CMD sh -c "npm run $(echo ${WHICH_GROOMER})"
