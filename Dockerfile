@@ -23,7 +23,4 @@ RUN npm run test
 
 EXPOSE 4500
 
-ARG WHICH_GROOMER="start-todo-groomer"
-ENV WHICH_GROOMER=${WHICH_GROOMER}
-
-CMD ["npm", "run", ${WHICH_GROOMER}]
+CMD ["npm", "run", "start-todo-groomer"]
