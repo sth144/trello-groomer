@@ -162,13 +162,15 @@ export const ToDoGroomer = function() {
         /** auto-label cards based on titles */
         logger.info("Adding labels according to keywords in card titles");
         
-        todoController.AllLabelNames
+        const addedLabels = new Promise(async (res) => {
             /** work keyword conflicts with a lot of irrelevant card titles */
-            .filter(x => x !== "Work")
-            .forEach(async (labelName) => {
+            const allLabels = todoController.AllLabelNames
+                                                .filter(x => x !== "Work");
+            for (let labelName of allLabels) {
                 await todoController.addLabelToCardsInListIfTitleContains(labelName, [labelName]);
-            });
-        
+            }
+        });
+
         const autoLabelConfigPath = join(process.cwd(), "config/auto-label.config.json");
         if (existsSync(autoLabelConfigPath)) {
             const autoLabelConfig = require(autoLabelConfigPath);

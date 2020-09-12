@@ -675,12 +675,17 @@ export class BoardController<T extends BoardModel> {
          * get all labels on board
          */
         const allLabels = { };
-        (await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`)).map((label: any) => {
-            if (label.hasOwnProperty("id") && label.hasOwnProperty("name")) {
-                Object.assign(allLabels, { [label.name]: label.id })
-            }
-        });
-
+        (await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`))
+            .map((label: Record<string, string>) => {
+                if (label.hasOwnProperty("id") 
+                 && label.hasOwnProperty("name")
+                 && label.name.length > 0 
+                 && label.hasOwnProperty("color")
+                 && label.color !== null) {
+                    Object.assign(allLabels, { [label.name]: label.id })
+                }
+            });
+            
         this.boardModel.Labels = allLabels;
     }
 
