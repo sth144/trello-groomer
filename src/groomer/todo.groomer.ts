@@ -83,7 +83,6 @@ export const ToDoGroomer = function() {
             key: secrets.key,
             token: secrets.token
         });
-
         await todoController.wakeUp();
         await historyController.wakeUp();
     }
@@ -135,7 +134,7 @@ export const ToDoGroomer = function() {
         subprocess.stderr.on("data", (err: string) => {
             logger.info(err.toString());
         });
-        const closed = new Promise((res) => {
+        const closed = new Promise<void>((res) => {
             subprocess.on("close", () => {
                 res();
             });

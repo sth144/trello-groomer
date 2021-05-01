@@ -627,7 +627,6 @@ export class BoardController<T extends BoardModel> {
          */
         this.allListsOnBoard = await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
         const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
-
         for (const responseList of this.allListsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
                 if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
@@ -639,7 +638,10 @@ export class BoardController<T extends BoardModel> {
                     });
                     /** fetch cards for list */
                     (modelListsHandle)[listNameToFetch].cards
-                        = await this.httpClient.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
+                        = await this.httpClient.asyncGet(`/lists/${responseList.id}/cards`
+                                                        + `?attachments=true`
+                                                        + `&actions=deleteAttachmentFromCard,updateCard`
+                                                        + `&limit=200`);
                 }
             }
         };

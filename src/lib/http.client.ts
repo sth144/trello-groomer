@@ -28,6 +28,7 @@ export class TrelloHttpClient {
                 let result = null;
                 try {
                     result = JSON.parse(body)
+
                     resolve(result);
                 } catch(e) {
 
