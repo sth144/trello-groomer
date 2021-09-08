@@ -26,14 +26,17 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                try {
-                    result = JSON.parse(body)
 
-                    resolve(result);
-                } catch(e) {
+                if (body !== undefined) {
+                    try {
+                        result = JSON.parse(body)
 
-                    logger.error(`${err} ${e} ${JSON.stringify(response)}`);
-                    reject(e);
+                        resolve(result);
+                    } catch(e) {
+
+                        logger.error(`${err} ${e} ${JSON.stringify(response)}`);
+                        reject(e);
+                    }
                 }
             });
         });
@@ -52,13 +55,15 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                try {
-                    result = JSON.parse(body)
-                    resolve(result);
-                } catch(e) {
+                if (body !== undefined) {
+                    try {
+                        result = JSON.parse(body)
+                        resolve(result);
+                    } catch(e) {
 
-                    logger.error(`${err} ${e} ${JSON.stringify(response)}`);
-                    reject(e);
+                        logger.error(`${err} ${e} ${JSON.stringify(response)}`);
+                        reject(e);
+                    }
                 }
             });
         });
@@ -81,13 +86,15 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                try {
-                    result = JSON.parse(body)
-                    resolve(result);
-                } catch(e) {
+                if (body !== undefined) {
+                    try {
+                        result = JSON.parse(body)
+                        resolve(result);
+                    } catch(e) {
 
-                    logger.error(`${err} ${e} ${JSON.stringify(response)}`);
-                    reject(e);
+                        logger.error(`${err} ${e} ${JSON.stringify(response)}`);
+                        reject(e);
+                    }
                 }
             });
         });
@@ -105,12 +112,14 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                try {
-                    result = JSON.parse(body)
-                    resolve(result);
-                } catch(e) {
-                    logger.error(`${err} ${e} ${response}`);
-                    reject(e);
+                if (body !== undefined) {
+                    try {
+                        result = JSON.parse(body)``
+                        resolve(result);
+                    } catch(e) {
+                        logger.error(`${err} ${e} ${response}`);
+                        reject(e);
+                    }
                 }
             });
         });

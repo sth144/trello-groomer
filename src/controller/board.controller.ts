@@ -712,6 +712,7 @@ export class BoardController<T extends BoardModel> {
                         cards: []
                     })
                 });
+
                 /** fetch cards for list */
                 (modelListsHandle)[responseList.name].cards
                     = await this.httpClient.asyncGet(`/lists/${responseList.id}/cards?attachments=true&actions=deleteAttachmentFromCard,updateCard`);
