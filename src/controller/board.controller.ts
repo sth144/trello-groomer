@@ -625,7 +625,10 @@ export class BoardController<T extends BoardModel> {
         /**
          * get all lists on board, map to lists specified on BoardModel
          */
-        this.allListsOnBoard = await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`).catch((err) => console.error(err));
+        this.allListsOnBoard = 
+            await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`)
+                                 .catch((err) => console.error(err));
+
         const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
         for (const responseList of this.allListsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
@@ -672,7 +675,6 @@ export class BoardController<T extends BoardModel> {
             }
         }
 
-        logger.info("Retrieving labels");
         /**
          * get all labels on board
          */

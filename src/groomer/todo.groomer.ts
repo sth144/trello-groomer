@@ -127,7 +127,7 @@ export const ToDoGroomer = function() {
         logger.info("Adding labels to unlabeled cards according to machine learning model");
 
         const { spawn } = require("child_process");
-        const subprocess = spawn("python3", ["label.py"], { cwd: "./model" });
+        const subprocess = spawn("python3", ["label.py"], { cwd: "./py/model" });
         subprocess.stdout.on("data", (data: string) => {
             logger.info(data.toString());
         });
@@ -143,13 +143,14 @@ export const ToDoGroomer = function() {
 
         logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
-        if (existsSync(join(process.cwd(), "cache/label.model-output.json"))) {
-            const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
+        const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
+
+        if (existsSync(labelModelOutputPath)) {
             if ( require.hasOwnProperty("cache") 
              &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
                 delete require.cache[labelModelOutputPath]; 
             }
-            const labelsFromModel = require(join(process.cwd(), "cache/label.model-output.json"));
+            const labelsFromModel = require(labelModelOutputPath);
             
             logger.info("Labels from ML model:");
             logger.info(JSON.stringify(labelsFromModel));

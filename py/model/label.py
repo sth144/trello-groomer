@@ -14,14 +14,14 @@ from os import path
 # TODO: use sklearn's built in neural network support
 # TODO: break these parsing operations into their own functions
 labels = None
-if (path.exists("../cache/labels.json")):
-    with open("../cache/labels.json") as data_file:
+if (path.exists("../../cache/labels.json")):
+    with open("../../cache/labels.json") as data_file:
         text = data_file.read()
         labels = json.loads(text)
 
 unlabeled_card_names = None
-if (path.exists("../cache/unlabeled.json")):
-    with open("../cache/unlabeled.json") as data_file:
+if (path.exists("../../cache/unlabeled.json")):
+    with open("../../cache/unlabeled.json") as data_file:
         text = data_file.read()
         unlabeled_card_names = json.loads(text)
 
@@ -95,4 +95,4 @@ for label in labels:
             i += 1
 
 print("Results: " + matches)
-json.dump(matches, open("../cache/label.model-output.json", "w+"))
+json.dump(matches, open("../../cache/label.model-output.json", "w+"))
