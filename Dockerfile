@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 RUN which python3
+RUN pip install audible
 # RUN pip3 install --upgrade pip
 # RUN pip3 install wheel
 # RUN pip3 install -r requirements.txt
