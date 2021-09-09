@@ -218,3 +218,50 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trello-groomer-media
+  labels:
+    app: trello-groomer-media
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trello-groomer-media
+  template:
+    metadata:
+      labels:
+        app: trello-groomer-media
+        name: trello-groomer-media
+    spec:
+      containers:
+        - name: trello-groomer-media
+          image: sthinds/trello-groomer
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: trello-groomer-config-volume
+              mountPath: /usr/src/app/config
+            - name: trello-groomer-cache-volume
+              mountPath: /usr/src/app/cache
+            - name: trello-groomer-log-volume
+              mountPath: /usr/src/app/log
+            - name: trello-groomer-timezone
+              mountPath: /etc/localtime
+          env:
+            - name: WHICH_GROOMER
+              value: "start-media-groomer"
+      volumes:
+        - name: trello-groomer-config-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-config-claim
+        - name: trello-groomer-cache-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-cache-claim
+        - name: trello-groomer-log-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-log-claim
+        - name: trello-groomer-timezone
+          hostPath:
+            path: /usr/share/zoneinfo/America/Chicago
