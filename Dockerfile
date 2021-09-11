@@ -1,19 +1,17 @@
-FROM node:13-alpine
-RUN apk --no-cache add --virtual native-deps python3 python3-dev build-base
+FROM debian:buster-slim
+RUN apt update
+RUN apt install -y  python3 \
+                    python3-dev \
+                    python3-pip \
+                    npm \
+                    nodejs
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY . .
 
-RUN which python3
-RUN pip install audible
-# RUN pip3 install --upgrade pip
-# RUN pip3 install wheel
-# RUN pip3 install -r requirements.txt
-# RUN pip3 install numpy
-# RUN pip3 install scipy
-# RUN pip install pandas
-# RUN pip3 install scikit-learn
+RUN pip3 install --upgrade pip
+RUN pip3 install -r requirements.txt
 
 
 RUN npm install -g typescript
