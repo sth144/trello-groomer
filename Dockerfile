@@ -1,10 +1,14 @@
 FROM debian:buster-slim
-RUN apt update
-RUN apt install -y  python3 \
+RUN apt-get update
+RUN apt-get install -y  python3 \
                     python3-dev \
                     python3-pip \
                     npm \
                     nodejs \
+                    zlib1g \
+                    zlib1g-dev \
+                    libjpeg-dev \
+                    libpng-dev \
                     python3-pil \
                     python3-pil.imagetk
 
