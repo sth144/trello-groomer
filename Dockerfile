@@ -5,8 +5,8 @@ RUN apt install -y  python3 \
                     python3-pip \
                     npm \
                     nodejs \
-                    jpeg-dev \
-                    zlib-dev
+                    python3-pil \
+                    python3-pil.imagetk
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
