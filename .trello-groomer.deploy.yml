@@ -124,6 +124,7 @@ spec:
   selector:
     matchLabels:
       directory: log
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -265,3 +266,19 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
+# TODO: get this working?
+# ---
+# apiVersion: batch/v1beta1
+# kind: CronJob
+# metadata:
+#   name: restart-trello-groomers
+# spec:
+#   concurrencyPolicy: Forbid
+#   schedule: '0 0 * * 0' # Run once a week at midnight on Sunday morning
+#   jobTemplate:
+#     spec:
+#       backoffLimit: 2
+#       activeDeadlineSeconds: 600
+#       template:
+#         spec:
+#           restartPolicy: Never
