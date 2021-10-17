@@ -4,7 +4,9 @@ RUN apt install -y  python3 \
                     python3-dev \
                     python3-pip \
                     npm \
-                    nodejs
+                    nodejs \
+                    jpeg-dev \
+                    zlib-dev
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
