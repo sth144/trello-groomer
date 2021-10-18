@@ -3,7 +3,7 @@ sudo: required
 env:
   global:
     - DOCKER_REPO=sthinds/trello-groomer
-    - ARCHITECTURE_TARGETS=linux/arm/v7 # linux/arm64,linux/amd64
+    - ARCHITECTURE_TARGETS=linux/arm/v7,linux/arm64,linux/amd64
 before_install:
   # TODO: use service instead of this first line? stop and restart?
   - curl -fsSL https://get.docker.com | sh
