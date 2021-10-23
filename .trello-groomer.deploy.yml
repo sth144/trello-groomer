@@ -125,6 +125,7 @@ spec:
     matchLabels:
       directory: log
 
+
 ---
 apiVersion: apps/v1
 kind: Deployment
