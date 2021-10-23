@@ -38,7 +38,7 @@ switch (whichGroomer) {
                     try {
                         const failureTimeout = setTimeout(() => { 
                             throw new Error("Job timed out"); 
-                        }, 2 * 5 * 60 * 10000);
+                        }, 20 * 60 * 1000);
         
                         const workGroomer = WorkGroomer();
                         await workGroomer.run();
@@ -76,8 +76,8 @@ switch (whichGroomer) {
                     [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
                     try {
                         const failureTimeout = setTimeout(() => { 
-                            throw new Error("Job timed out"); 
-                        }, 2 * 5 * 60 * 10000);
+                            throw new Error("Job timed out");
+                        }, 20 * 60 * 1000);
         
                         const mediaGroomer = MediaGroomer();
                         await mediaGroomer.run();
@@ -117,8 +117,8 @@ switch (whichGroomer) {
                     [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
                     try {
                         const failureTimeout = setTimeout(() => { 
-                            throw new Error("Job timed out"); 
-                        }, 2 * 5 * 60 * 10000);
+                            throw new Error("Job timed out");
+                        }, 20 * 60 * 1000);
         
                         const toDoGroomer = ToDoGroomer();
                         await toDoGroomer.run();
