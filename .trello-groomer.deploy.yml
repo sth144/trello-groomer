@@ -145,7 +145,7 @@ spec:
     spec:
       containers:
         - name: trello-groomer-todo
-          image: sthinds/trello-groomer
+          image: sthinds/trello-groomer:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: trello-groomer-config-volume
@@ -192,7 +192,7 @@ spec:
     spec:
       containers:
         - name: trello-groomer-work
-          image: sthinds/trello-groomer
+          image: sthinds/trello-groomer:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: trello-groomer-config-volume
@@ -239,7 +239,7 @@ spec:
     spec:
       containers:
         - name: trello-groomer-media
-          image: sthinds/trello-groomer
+          image: sthinds/trello-groomer:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: trello-groomer-config-volume

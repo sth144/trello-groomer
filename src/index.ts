@@ -32,12 +32,14 @@ switch (whichGroomer) {
                 logger.info(`************************************`
                             +` Starting job (${mainJobNo + 1}) (Work board) ${(new Date()).toString()}`
                             +` ***************************************`);
+                let failureTimeout: NodeJS.Timeout;
                 if (!mainMutex) {
                     logger.info("Mutex acquired");
                     [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
                     try {
-                        const failureTimeout = setTimeout(() => { 
-                            throw new Error("Job timed out"); 
+                        failureTimeout = setTimeout(() => { 
+                            mainMutex = false;
+                            throw new Error(`Job ${mainJobNo} timed out`); 
                         }, 20 * 60 * 1000);
         
                         const workGroomer = WorkGroomer();
@@ -48,6 +50,9 @@ switch (whichGroomer) {
                         clearTimeout(failureTimeout);
                     } catch (e) {
                         logger.info(`Run ${mainJobNo} failed: ${e}`);
+                        if (failureTimeout) {
+                            clearTimeout(failureTimeout);
+                        }
                         mainMutex = false;
                     }
                 } else {
@@ -71,11 +76,13 @@ switch (whichGroomer) {
                 logger.info(`************************************`
                             +` Starting job (${mainJobNo + 1}) (Media board) ${(new Date()).toString()}`
                             +` ***************************************`);
+                let failureTimeout: NodeJS.Timeout;
                 if (!mainMutex) {
                     logger.info("Mutex acquired");
                     [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
                     try {
-                        const failureTimeout = setTimeout(() => { 
+                        const failureTimeout = setTimeout(() => {
+                            mainMutex = false;
                             throw new Error("Job timed out");
                         }, 20 * 60 * 1000);
         
@@ -87,6 +94,9 @@ switch (whichGroomer) {
                         clearTimeout(failureTimeout);
                     } catch (e) {
                         logger.info(`Run ${mainJobNo} failed: ${e}`);
+                        if (failureTimeout) {
+                            clearTimeout(failureTimeout);
+                        }
                         mainMutex = false;
                     }
                 } else {
@@ -112,11 +122,13 @@ switch (whichGroomer) {
                 logger.info(`************************************`
                             +` Starting job ${mainJobNo + 1} (ToDo board) ${(new Date()).toString()}`
                             +` ***************************************`);
+                let failureTimeout: NodeJS.Timeout;            
                 if (!mainMutex) {
                     logger.info("Mutex acquired");
                     [ mainMutex, mainJobNo ] = [ true, mainJobNo + 1 ];
                     try {
-                        const failureTimeout = setTimeout(() => { 
+                        const failureTimeout = setTimeout(() => {
+                            mainMutex = false;
                             throw new Error("Job timed out");
                         }, 20 * 60 * 1000);
         
@@ -128,6 +140,9 @@ switch (whichGroomer) {
                         clearTimeout(failureTimeout);
                     } catch (e) {
                         logger.info(`Run ${mainJobNo} failed: ${e}`);
+                        if (failureTimeout) {
+                            clearTimeout(failureTimeout);
+                        }
                         mainMutex = false;
                     }
                 } else {

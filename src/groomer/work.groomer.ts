@@ -87,7 +87,6 @@ export const WorkGroomer = function() {
                 Not(cardHasDueDate)); 
             await workController.assignDueDatesIf(workModel.lists.backlog.id, autoDueConfig.backlog, 
                 Not(cardHasDueDate));
-
         }
 
         logger.info("Updating list placements");
