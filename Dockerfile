@@ -10,7 +10,8 @@ RUN apt-get install -y  python3 \
                     libjpeg-dev \
                     libpng-dev \
                     python3-pil \
-                    python3-pil.imagetk
+                    python3-pil.imagetk \
+                    ca-certificates
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

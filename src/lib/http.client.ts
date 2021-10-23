@@ -1,5 +1,8 @@
 import { logger } from "./logger";
 
+/** allow insecure requests */
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const request = require("request");
 
 export class TrelloHttpClient {
