@@ -1,6 +1,6 @@
 import { logger } from "./logger";
 
-/** allow insecure requests */
+/** allow insecure requests for development */
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const request = require("request");
@@ -30,7 +30,9 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-                if (body !== undefined) {
+logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+
+                if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
 
@@ -57,8 +59,11 @@ export class TrelloHttpClient {
                 uri: this.getLongUrl(url),
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
+
+logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+
                 let result = null;
-                if (body !== undefined) {
+                if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
                         resolve(result);
@@ -89,7 +94,8 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                if (body !== undefined) {
+logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+                if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
                         resolve(result);
@@ -115,7 +121,8 @@ export class TrelloHttpClient {
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-                if (body !== undefined) {
+logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+                if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)``
                         resolve(result);

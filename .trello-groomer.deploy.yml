@@ -157,8 +157,8 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            - name: trello-groomer-ssl
-              mountPath: /etc/ssl/certs
+            # - name: trello-groomer-ssl
+            #   mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-todo-groomer"
@@ -175,9 +175,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        - name: trello-groomer-ssl
-          hostPath:
-            path: /etc/ssl/certs/
+        # - name: trello-groomer-ssl
+        #   hostPath:
+        #     path: /etc/ssl/certs/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -209,8 +209,8 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            - name: trello-groomer-ssl
-              mountPath: /etc/ssl/certs
+            # - name: trello-groomer-ssl
+            #   mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-work-groomer"
@@ -227,9 +227,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        - name: trello-groomer-ssl
-          hostPath:
-            path: /etc/ssl/certs/
+        # - name: trello-groomer-ssl
+        #   hostPath:
+        #     path: /etc/ssl/certs/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -261,8 +261,8 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            - name: trello-groomer-ssl
-              mountPath: /etc/ssl/certs
+            # - name: trello-groomer-ssl
+            #   mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-media-groomer"
@@ -279,9 +279,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        - name: trello-groomer-ssl
-          hostPath:
-            path: /etc/ssl/certs/
+        # - name: trello-groomer-ssl
+        #   hostPath:
+        #     path: /etc/ssl/certs/
 # TODO: get this working?
 # ---
 # apiVersion: batch/v1beta1
