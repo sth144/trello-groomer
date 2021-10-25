@@ -30,7 +30,7 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
 
                 if (body !== undefined && body !== null) {
                     try {
@@ -60,7 +60,7 @@ logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
 
-logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
 
                 let result = null;
                 if (body !== undefined && body !== null) {
@@ -94,7 +94,7 @@ logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
@@ -121,7 +121,7 @@ logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.log(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)``
