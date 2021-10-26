@@ -20,7 +20,6 @@ export class TrelloHttpClient {
     public async asyncGet(url: string): Promise<any> {
         this.numRequestsSent++;
 
-        logger.info(`GET ${url}`);
 
         return new Promise((resolve, reject) => {
             request({
@@ -30,7 +29,8 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.info(` ${JSON.stringify(response)}`);
+logger.info(`GET ${url}`);
+logger.info(` ${JSON.stringify(err)}`);
 logger.info("Response: ");
 logger.info(` ${JSON.stringify(response)}`);
 logger.info("Body: ")
