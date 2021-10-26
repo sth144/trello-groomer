@@ -30,7 +30,11 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Response: ");
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Body: ")
+logger.info(` ${body}`);
 
                 if (body !== undefined && body !== null) {
                     try {
@@ -60,7 +64,11 @@ logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
 
-logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Response: ");
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Body: ")
+logger.info(` ${body}`);
 
                 let result = null;
                 if (body !== undefined && body !== null) {
@@ -94,7 +102,11 @@ logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Response: ");
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Body: ")
+logger.info(` ${body}`);
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
@@ -121,7 +133,11 @@ logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.info(`${JSON.stringify(err)} ${JSON.stringify(response)} ${body}`);
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Response: ");
+logger.info(` ${JSON.stringify(response)}`);
+logger.info("Body: ")
+logger.info(` ${body}`);
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)``
