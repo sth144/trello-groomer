@@ -29,7 +29,7 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.info(`GET ${url}`);
+logger.info(`For GET ${url}`);
 logger.info(` ${JSON.stringify(err)}`);
 logger.info("Response: ");
 logger.info(` ${JSON.stringify(response)}`);
@@ -64,7 +64,8 @@ logger.info(` ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
 
-logger.info(` ${JSON.stringify(response)}`);
+logger.info(`For PUT ${url}`);
+logger.info(` ${JSON.stringify(err)}`);
 logger.info("Response: ");
 logger.info(` ${JSON.stringify(response)}`);
 logger.info("Body: ")
@@ -102,11 +103,15 @@ logger.info(` ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.info(` ${JSON.stringify(response)}`);
+                
+logger.info(`For POST ${url}`);
+logger.info(` ${JSON.stringify(err)}`);
 logger.info("Response: ");
 logger.info(` ${JSON.stringify(response)}`);
 logger.info("Body: ")
 logger.info(` ${body}`);
+
+
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)
@@ -133,11 +138,14 @@ logger.info(` ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
-logger.info(` ${JSON.stringify(response)}`);
+
+logger.info(`For DELETE ${url}`);
+logger.info(` ${JSON.stringify(err)}`);
 logger.info("Response: ");
 logger.info(` ${JSON.stringify(response)}`);
 logger.info("Body: ")
 logger.info(` ${body}`);
+
                 if (body !== undefined && body !== null) {
                     try {
                         result = JSON.parse(body)``
