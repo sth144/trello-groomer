@@ -29,17 +29,20 @@ export class TrelloHttpClient {
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.info(`For GET ${url}`);
-logger.info(` ${JSON.stringify(err)}`);
-logger.info("Response: ");
-logger.info(` ${JSON.stringify(response)}`);
-logger.info("Body: ")
-logger.info(` ${body}`);
+// logger.info(`For GET ${url}`);
+// logger.info(` ${JSON.stringify(err)}`);
+// logger.info("Response: ");
+// logger.info(` ${JSON.stringify(response)}`);
+// logger.info("Body: ")
+// logger.info(` ${body}`);
 
                 if (body !== undefined && body !== null) {
                     try {
-                        result = JSON.parse(body)
-
+                        if (typeof body === "object") {
+                            result = JSON.parse(body);
+                        } else {
+                            result = body;
+                        }
                         resolve(result);
                     } catch(e) {
 
@@ -64,17 +67,21 @@ logger.info(` ${body}`);
                 timeout: 60000
             }, (err: Error, response: Response, body: string) => {
 
-logger.info(`For PUT ${url}`);
-logger.info(` ${JSON.stringify(err)}`);
-logger.info("Response: ");
-logger.info(` ${JSON.stringify(response)}`);
-logger.info("Body: ")
-logger.info(` ${body}`);
+// logger.info(`For PUT ${url}`);
+// logger.info(` ${JSON.stringify(err)}`);
+// logger.info("Response: ");
+// logger.info(` ${JSON.stringify(response)}`);
+// logger.info("Body: ")
+// logger.info(` ${body}`);
 
                 let result = null;
                 if (body !== undefined && body !== null) {
                     try {
-                        result = JSON.parse(body)
+                        if (typeof body === "object") {
+                            result = JSON.parse(body);
+                        } else {
+                            result = body;
+                        }
                         resolve(result);
                     } catch(e) {
 
@@ -104,20 +111,23 @@ logger.info(` ${body}`);
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
                 
-logger.info(`For POST ${url}`);
-logger.info(` ${JSON.stringify(err)}`);
-logger.info("Response: ");
-logger.info(` ${JSON.stringify(response)}`);
-logger.info("Body: ")
-logger.info(` ${body}`);
+// logger.info(`For POST ${url}`);
+// logger.info(` ${JSON.stringify(err)}`);
+// logger.info("Response: ");
+// logger.info(` ${JSON.stringify(response)}`);
+// logger.info("Body: ")
+// logger.info(` ${body}`);
 
 
                 if (body !== undefined && body !== null) {
                     try {
-                        result = JSON.parse(body)
+                        if (typeof body === "object") {
+                            result = JSON.parse(body);
+                        } else {
+                            result = body;
+                        }
                         resolve(result);
                     } catch(e) {
-
                         logger.error(`${err} ${e} ${JSON.stringify(response)}`);
                         reject(e);
                     }
@@ -139,16 +149,20 @@ logger.info(` ${body}`);
             }, (err: Error, response: Response, body: string) => {
                 let result = null;
 
-logger.info(`For DELETE ${url}`);
-logger.info(` ${JSON.stringify(err)}`);
-logger.info("Response: ");
-logger.info(` ${JSON.stringify(response)}`);
-logger.info("Body: ")
-logger.info(` ${body}`);
+// logger.info(`For DELETE ${url}`);
+// logger.info(` ${JSON.stringify(err)}`);
+// logger.info("Response: ");
+// logger.info(` ${JSON.stringify(response)}`);
+// logger.info("Body: ")
+// logger.info(` ${body}`);
 
                 if (body !== undefined && body !== null) {
                     try {
-                        result = JSON.parse(body)``
+                        if (typeof body === "object") {
+                            result = JSON.parse(body);
+                        } else {
+                            result = body;
+                        }
                         resolve(result);
                     } catch(e) {
                         logger.error(`${err} ${e} ${response}`);

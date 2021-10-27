@@ -143,18 +143,18 @@ export const ToDoGroomer = function() {
 
         logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
-        const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
+        // const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
 
-        if (existsSync(labelModelOutputPath)) {
-            if ( require.hasOwnProperty("cache") 
-             &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
-                delete require.cache[labelModelOutputPath]; 
-            }
-            const labelsFromModel = require(labelModelOutputPath);
+        // if (existsSync(labelModelOutputPath)) {
+        //     if ( require.hasOwnProperty("cache") 
+        //      &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
+        //         delete require.cache[labelModelOutputPath]; 
+        //     }
+        //     const labelsFromModel = require(labelModelOutputPath);
             
-            logger.info("Labels from ML model:");
-            logger.info(JSON.stringify(labelsFromModel));
-        }
+        //     logger.info("Labels from ML model:");
+        //     logger.info(JSON.stringify(labelsFromModel));
+        // }
 
         // TODO: once model implemented, reconsider how autolabelling occurs
         // TODO: integrate stopwords into the auto-labelling process
