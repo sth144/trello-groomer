@@ -177,3 +177,12 @@ export function syncObjectsWithPreference(preferred: ConfigObj, secondary: Confi
 
     return result;
 }
+
+export function IsJsonString(str: string) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}

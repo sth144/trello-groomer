@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { IsJsonString } from "./object.utils";
 
 /** allow insecure requests for development */
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -38,7 +39,7 @@ export class TrelloHttpClient {
 
                 if (body !== undefined && body !== null) {
                     try {
-                        if (typeof body === "object") {
+                        if (typeof body === "object" || IsJsonString(body)) {
                             result = JSON.parse(body);
                         } else {
                             result = body;
@@ -77,7 +78,7 @@ export class TrelloHttpClient {
                 let result = null;
                 if (body !== undefined && body !== null) {
                     try {
-                        if (typeof body === "object") {
+                        if (typeof body === "object" || IsJsonString(body)) {
                             result = JSON.parse(body);
                         } else {
                             result = body;
@@ -121,7 +122,7 @@ export class TrelloHttpClient {
 
                 if (body !== undefined && body !== null) {
                     try {
-                        if (typeof body === "object") {
+                        if (typeof body === "object" || IsJsonString(body)) {
                             result = JSON.parse(body);
                         } else {
                             result = body;
@@ -158,7 +159,7 @@ export class TrelloHttpClient {
 
                 if (body !== undefined && body !== null) {
                     try {
-                        if (typeof body === "object") {
+                        if (typeof body === "object" || IsJsonString(body)) {
                             result = JSON.parse(body);
                         } else {
                             result = body;

@@ -425,6 +425,10 @@ export class BoardController<T extends BoardModel> {
             const labelId = this.boardModel.getLabels()[labelName];
 
             this.boardModel.getAllCards().forEach(async (card) => {
+                if (card.name === undefined) {
+                    return;
+                }
+                
                 const cardNameLowerCase = card.name.toLowerCase();
                 
                 if (checkFor.some(x => cardNameLowerCase.indexOf(x) !== -1)
@@ -628,11 +632,15 @@ export class BoardController<T extends BoardModel> {
         this.allListsOnBoard = 
             await this.httpClient.asyncGet(`/board/${this.boardModel.id}/lists`)
                                  .catch((err) => console.error(err));
+        if (typeof(this.allListsOnBoard) === "string") {
+            this.allListsOnBoard = JSON.parse(this.allListsOnBoard);
+        }
 
         const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
         for (const responseList of this.allListsOnBoard) {
             for (const listNameToFetch of this.boardModel.getListNames()) {
-                if (responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
+                if (responseList.name !== undefined
+                 && responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1) {
                     /** create a new list object in memory for each desired list */
                     Object.assign(modelListsHandle[listNameToFetch], {
                         id: responseList.id,
@@ -655,23 +663,31 @@ export class BoardController<T extends BoardModel> {
         const checklistsOnBoard = await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/checklists`);
 
         for (const responseChecklist of checklistsOnBoard) {
-            /** create a new checklist model in memory */
-            (this.boardModel.getChecklists() as any)[responseChecklist.id] = new Checklist();
-            Object.assign((this.boardModel.getChecklists() as any)[responseChecklist.id], {
-                id: responseChecklist.id,
-                name: responseChecklist.name,
-                idCard: responseChecklist.idCard,
-            });
-            /** populate in memory checklist model with checklist items */
-            for (const responseCheckItem of responseChecklist.checkItems) {
-                const newCheckItem = new CheckItem();
-                Object.assign(newCheckItem, {
-                    id: responseCheckItem.id,
-                    idChecklist: responseCheckItem.idChecklist,
-                    name: responseCheckItem.name,
-                    state: responseCheckItem.state
+            if (responseChecklist.hasOwnProperty("id") && responseChecklist.id !== undefined) {
+                /** create a new checklist model in memory */
+                (this.boardModel.getChecklists() as Record<string, Checklist>)[responseChecklist.id] = 
+                    new Checklist();
+                Object.assign((
+                    this.boardModel.getChecklists() as Record<string, Checklist>
+                )[responseChecklist.id], {
+                    id: responseChecklist.id,
+                    name: responseChecklist.name,
+                    idCard: responseChecklist.idCard,
                 });
-                (this.boardModel.getChecklists())[responseChecklist.id].checkItems.push(newCheckItem);
+
+                if (responseChecklist) {
+                    /** populate in memory checklist model with checklist items */
+                    for (const responseCheckItem of responseChecklist.checkItems) {
+                        const newCheckItem = new CheckItem();
+                        Object.assign(newCheckItem, {
+                            id: responseCheckItem.id,
+                            idChecklist: responseCheckItem.idChecklist,
+                            name: responseCheckItem.name,
+                            state: responseCheckItem.state
+                        });
+                        (this.boardModel.getChecklists())[responseChecklist.id].checkItems.push(newCheckItem);
+                    }
+                }
             }
         }
 
@@ -679,8 +695,13 @@ export class BoardController<T extends BoardModel> {
          * get all labels on board
          */
         const allLabels = { };
-        (await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`))
-            .map((label: Record<string, string>) => {
+        let labelResponse: Array<Record<string, string>> = 
+            await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`);
+        if (typeof (labelResponse) === "string") {
+            labelResponse = JSON.parse(labelResponse);
+        }
+
+        labelResponse = <any>labelResponse.map((label: Record<string, string>) => {
                 if (label.hasOwnProperty("id") 
                  && label.hasOwnProperty("name")
                  && label.name.length > 0 

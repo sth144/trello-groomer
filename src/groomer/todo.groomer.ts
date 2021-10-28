@@ -112,8 +112,11 @@ export const ToDoGroomer = function() {
         const yearnum = start.getFullYear() ;
         const monthnum = start.getMonth();
         await historyController.addListsToModelIfNameMeetsConditions([(x: List) => {
-            return x.name.match(DateRegexes.MonthYear) !== null;
-        }, (x: List) => {        
+            return x.hasOwnProperty("name") && x.name.match(DateRegexes.MonthYear) !== null;
+        }, (x: List) => {
+            if (!x.hasOwnProperty("name")) {
+                return false;
+            }
             /** if list in current calendar year */
             return  (x.name.indexOf(yearnum.toString()) !== -1)
                 /** or list in last calendar year, but within last 12 months */
@@ -126,27 +129,28 @@ export const ToDoGroomer = function() {
         // TODO: introduce a simple machine learning model to come up with auto-label mappings
         logger.info("Adding labels to unlabeled cards according to machine learning model");
 
-        const { spawn } = require("child_process");
-        const subprocess = spawn("python3", ["label.py"], { cwd: "./py/model" });
-        subprocess.stdout.on("data", (data: string) => {
-            logger.info(data.toString());
-        });
-        subprocess.stderr.on("data", (err: string) => {
-            logger.info(err.toString());
-        });
-        const closed = new Promise<void>((res) => {
-            subprocess.on("close", () => {
-                res();
-            });
-        });
-        await closed;
+        // TODO: fix this
+        // const { spawn } = require("child_process");
+        // const subprocess = spawn("python3", ["label.py"], { cwd: "./py/model" });
+        // subprocess.stdout.on("data", (data: string) => {
+        //     logger.info(data.toString());
+        // });
+        // subprocess.stderr.on("data", (err: string) => {
+        //     logger.info(err.toString());
+        // });
+        // const closed = new Promise<void>((res) => {
+        //     subprocess.on("close", () => {
+        //         res();
+        //     });
+        // });
+        // await closed;
 
         logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
         // const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
 
         // if (existsSync(labelModelOutputPath)) {
-        //     if ( require.hasOwnProperty("cache") 
+        //     if ( require.hasOwnProperty("cachze") 
         //      &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
         //         delete require.cache[labelModelOutputPath]; 
         //     }
