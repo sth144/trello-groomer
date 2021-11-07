@@ -55,6 +55,10 @@ switch (whichGroomer) {
                         }
                         mainMutex = false;
                     }
+
+                    if (mainJobNo === 30) {
+                        process.exit(0);
+                    }
                 } else {
                     logger.info(`Job ${mainJobNo} is still running, skipping scheduled run`);
                 }
@@ -98,6 +102,10 @@ switch (whichGroomer) {
                             clearTimeout(failureTimeout);
                         }
                         mainMutex = false;
+                    }
+
+                    if (mainJobNo === 30) {
+                        process.exit(0);
                     }
                 } else {
                     logger.info(`Job ${mainJobNo} is still running, skipping scheduled run`);
@@ -144,6 +152,10 @@ switch (whichGroomer) {
                             clearTimeout(failureTimeout);
                         }
                         mainMutex = false;
+                    }
+
+                    if (mainJobNo === 30) {
+                        process.exit(0);
                     }
                 } else {
                     logger.info(`Job ${mainJobNo} is still running, skipping scheduled run`);

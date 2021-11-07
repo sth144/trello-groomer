@@ -20,7 +20,7 @@ spec:
   storageClassName: local-storage
   local:
     # NOTE: this directory must exist
-    path: /home/picocluster/Volumes/trello-groomer-config
+    path: /home/picocluster/Volumes/trello-groomer-config`
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -29,6 +29,7 @@ spec:
             operator: In
             values:
               - pc2
+              # - pc1
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -69,6 +70,7 @@ spec:
             operator: In
             values:
               - pc2
+              # - pc1
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -109,6 +111,7 @@ spec:
             operator: In
             values:
               - pc2
+              # - pc1
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

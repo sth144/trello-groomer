@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "npm install && tsc -p .",
-    "start": "npm run start-todo-groomer",
-    "start-todo-groomer": "node dist/index.js todo",
-    "start-work-groomer": "node dist/index.js work",
-    "start-media-groomer": "node dist/index.js media",
+    "start": "node dist/index.js todo",
+    "start-todo-groomer": "pm2 start dist/index.js --node-args='todo'",
+    "start-work-groomer": "pm2 start dist/index.js --node-args='work'",
+    "start-media-groomer": "pm2 start dist/index.js --node-args='media'",
     "test": "mocha --exit --require ts-node/register src/**/*.spec.ts",
     "deploy": "bash ./deploy.sh"
   },
@@ -17,6 +17,7 @@
   "dependencies": {
     "cron": "^1.8.2",
     "express": "^4.17.1",
+    "pm2": "^5.1.2",
     "request": "^2.88.0",
     "rxjs": "^6.5.3",
     "winston": "^3.2.1"
