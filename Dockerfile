@@ -22,7 +22,7 @@ RUN pip3 install -r requirements.txt
 
 RUN npm config set strict-ssl false
 RUN npm config set registry http://registry.npmjs.org/
-RUN npm install -g typescript pm2
+RUN npm install -g typescript
 RUN npm install
 RUN tsc -p .
 

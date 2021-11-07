@@ -56,7 +56,7 @@ switch (whichGroomer) {
                         mainMutex = false;
                     }
 
-                    if (mainJobNo === 30) {
+                    if (mainJobNo === 10) {
                         process.exit(0);
                     }
                 } else {
@@ -104,7 +104,7 @@ switch (whichGroomer) {
                         mainMutex = false;
                     }
 
-                    if (mainJobNo === 30) {
+                    if (mainJobNo === 10) {
                         process.exit(0);
                     }
                 } else {
@@ -154,7 +154,7 @@ switch (whichGroomer) {
                         mainMutex = false;
                     }
 
-                    if (mainJobNo === 30) {
+                    if (mainJobNo === 10) {
                         process.exit(0);
                     }
                 } else {
