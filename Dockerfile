@@ -32,4 +32,5 @@ EXPOSE 4500
 
 ARG WHICH_GROOMER
 
+RUN ["chmod", "+x", "/usr/src/app/util/start.sh"]
 CMD sh -c "npm run $(echo ${WHICH_GROOMER})"
