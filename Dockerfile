@@ -11,6 +11,7 @@ RUN node -v
 RUN apt-get install -y  python3 \
                     python3-dev \
                     python3-pip \
+                    python3-full \
                     npm \
                     zlib1g \
                     zlib1g-dev \
