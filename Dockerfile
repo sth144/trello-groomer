@@ -1,11 +1,13 @@
 FROM debian:bullseye-slim
 RUN apt-get update
 
+# replace shell with bash so we can source files
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt install -y nodejs
 RUN apt-get install -y  python3 \
                     python3-dev \
                     python3-pip \
                     npm \
-                    nodejs \
                     zlib1g \
                     zlib1g-dev \
                     libjpeg-dev \
@@ -19,10 +21,6 @@ RUN apt-get install -y  python3 \
                     libssl-dev \
                     libreadline-dev
 
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
-RUN . ~/.nvm/nvm.sh
-RUN nvm install 14
-RUN nvm use 14
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
