@@ -32,7 +32,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # RUN pip3 install --upgrade pip
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
 RUN npm config set strict-ssl false
 RUN npm config set registry http://registry.npmjs.org/
