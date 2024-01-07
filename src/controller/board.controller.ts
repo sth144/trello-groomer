@@ -538,7 +538,7 @@ export class BoardController<T extends BoardModel> {
     await Promise.all(batch);
   }
 
-  public async addLabelToCardsInListIfTitleContains(
+  public async addLabelToCardsInListIfTextContains(
     labelName: string,
     checkFor: string[]
   ): Promise<void> {
@@ -557,9 +557,11 @@ export class BoardController<T extends BoardModel> {
         }
 
         const cardNameLowerCase = card.name.toLowerCase();
+        const cardDescLowerCase = card.desc.toLowerCase();
+        const cardText = `${cardNameLowerCase} ${cardDescLowerCase}`;
 
         if (
-          checkFor.some((x) => cardNameLowerCase.indexOf(x) !== -1) &&
+          checkFor.some((x) => cardText.indexOf(x) !== -1) &&
           card.idLabels.indexOf(labelId) === -1
         ) {
           await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
@@ -594,6 +596,10 @@ export class BoardController<T extends BoardModel> {
       .forEach(async (cardWithLabel) => {
         await this.httpClient.asyncDelete(`/cards/${cardWithLabel.id}`);
       });
+  }
+
+  public async deleteCardByID(cardID: string) {
+    await this.httpClient.asyncDelete(`/cards/${cardID}`);
   }
 
   public async autoLinkRelatedCards(ignorePatterns: string[]): Promise<void> {

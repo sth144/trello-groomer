@@ -16,11 +16,17 @@ if (path.exists("../../config/audible-auth.json")):
         text = data_file.read()
         credentials = json.loads(text)
 
+def print_captcha_url(url):
+    print(url)
+    text = input("Captcha: ")
+    return text
+
 auth = audible.Authenticator.from_login(
     credentials["username"],
     credentials["password"],
     locale="US",
-    with_username=False
+    with_username=False,
+    captcha_callback=print_captcha_url
 )
 
 def get_wishlist_page(pageno, numresults):
