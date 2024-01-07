@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 RUN apt-get update
 
 # replace shell with bash so we can source files
