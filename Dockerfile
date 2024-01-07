@@ -1,6 +1,5 @@
 FROM debian:bullseye-slim
 RUN apt-get update
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 
 RUN apt-get install -y  python3 \
                     python3-dev \
@@ -13,7 +12,17 @@ RUN apt-get install -y  python3 \
                     libpng-dev \
                     python3-pil \
                     python3-pil.imagetk \
-                    ca-certificates
+                    ca-certificates \
+                    curl \
+                    wget \
+                    build-essential \
+                    libssl-dev \
+                    libreadline-dev
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
+RUN . ~/.nvm/nvm.sh
+RUN nvm install 14
+RUN nvm use 14
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
