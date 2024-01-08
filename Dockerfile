@@ -12,6 +12,7 @@ RUN apt install -y  python3 \
                     python3-dev \
                     python3-pip \
                     python3-full \
+                    pipx \
                     npm \
                     zlib1g \
                     zlib1g-dev \
@@ -32,7 +33,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # RUN pip3 install --upgrade pip
-RUN python3 -m pip install -r requirements.txt
+RUN pipx install -r requirements.txt
 
 RUN npm config set strict-ssl false
 RUN npm config set registry http://registry.npmjs.org/
