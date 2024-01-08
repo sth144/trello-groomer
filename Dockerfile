@@ -1,5 +1,5 @@
 FROM debian:bookworm-slim
-RUN apt-get update
+RUN apt update
 
 # replace shell with bash so we can source files
 RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
@@ -8,7 +8,7 @@ RUN apt install -y nodejs
 RUN echo "NODE VERSION"
 RUN node -v
 
-RUN apt-get install -y  python3 \
+RUN apt install -y  python3 \
                     python3-dev \
                     python3-pip \
                     python3-full \
