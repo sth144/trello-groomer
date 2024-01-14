@@ -112,6 +112,17 @@ export const WorkGroomer = function () {
         Not(cardHasDueDate)
       );
 
+      const addedLabels = new Promise(async (res) => {
+        /** work keyword conflicts with a lot of irrelevant card titles */
+        const allLabels = workController.AllLabelNames.filter(
+          (x) => x !== "Work"
+        );
+        for (let labelName of allLabels) {
+          await workController.addLabelToCardsInListIfTextContains(labelName, [
+            labelName,
+          ]);
+        }
+      });
       const autoLabelConfigPath = join(
         process.cwd(),
         "config/auto-label.config.json"
