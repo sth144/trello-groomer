@@ -1014,6 +1014,9 @@ export class BoardController<T extends BoardModel> {
 
   public dump(whichGroomer: string): void {
     // TODO: merge all this label stuff into a single json file
+
+    logger.info("Caching labels");
+
     writeFileSync(
       join(process.cwd(), `cache/labels.${whichGroomer}.json`),
       JSON.stringify(this.boardModel.getLabels())
@@ -1025,11 +1028,14 @@ export class BoardController<T extends BoardModel> {
         labelData.push({ name: x.name, labels: x.idLabels });
       }
     });
+
+    logger.info("Caching label data");
     writeFileSync(
       join(process.cwd(), `cache/label-data.${whichGroomer}.json`),
       JSON.stringify(labelData)
     );
 
+    logger.info("Caching unlabeled cards");
     const unlabeledCards: any[] = this.boardModel
       .getAllCards()
       .filter((x) => x.idLabels.length === 0)
@@ -1039,6 +1045,7 @@ export class BoardController<T extends BoardModel> {
       JSON.stringify(unlabeledCards)
     );
 
+    logger.info("Caching model");
     writeFileSync(
       join(process.cwd(), `cache/model.${whichGroomer}.json`),
       JSON.stringify(this.boardModel, null, 4)

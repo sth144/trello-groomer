@@ -49,6 +49,7 @@ data = pd.DataFrame(training_data)
 
 stemmer = SnowballStemmer("english")
 words = stopwords.words("english")
+
 data["cleaned"] = data["name"].apply(
     lambda x: " ".join(
         [stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in words]
@@ -91,7 +92,6 @@ for label in labels:
         for i, l in enumerate(target_names):
             top10 = np.argsort(clf.coef_[i])[-15:]
             print("%s: %s" % (l, " ".join(feature_names[top10])))
-
 
         predictions = model.predict(unlabeled_card_names)
         # print("predictions: " + str(predictions))
