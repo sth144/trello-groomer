@@ -110,11 +110,11 @@ export const ToDoGroomer = function () {
       "Auto-Due Configuration"
     );
     await todoController.syncConfigJsonWithCard(
-      "auto-label.config.json",
+      "auto-label.config.todo.json",
       "Auto-Label Configuration"
     );
     await todoController.syncConfigJsonWithCard(
-      "auto-link.config.json",
+      "auto-link.config.todo.json",
       "Auto-Link Configuration"
     );
 
@@ -151,44 +151,57 @@ export const ToDoGroomer = function () {
     const historyLists =
       todoController.importListsFromController(historyController);
 
-    // TODO: introduce a simple machine learning model to come up with auto-label mappings
+    // simple machine learning model to come up with auto-label mappings
     logger.info(
       "Adding labels to unlabeled cards according to machine learning model"
     );
 
-    // TODO: fix this
-    // const { spawn } = require("child_process");
-    // const subprocess = spawn("python3", ["label.py"], { cwd: "./py/model" });
-    // subprocess.stdout.on("data", (data: string) => {
-    //     logger.info(data.toString());
-    // });
-    // subprocess.stderr.on("data", (err: string) => {
-    //     logger.info(err.toString());
-    // });
-    // const closed = new Promise<void>((res) => {
-    //     subprocess.on("close", () => {
-    //         res();
-    //     });
-    // });
-    // await closed;
+    const { spawn } = require("child_process");
+    const subprocess = spawn("python3", ["label.py", "todo"], {
+      cwd: "./py/model",
+    });
+    subprocess.stdout.on("data", (data: string) => {
+      logger.info(data.toString());
+    });
+    subprocess.stderr.on("data", (err: string) => {
+      logger.info(err.toString());
+    });
+    const closed = new Promise<void>((res) => {
+      subprocess.on("close", () => {
+        res();
+      });
+    });
+    await closed;
 
     logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
-    // const labelModelOutputPath = join(process.cwd(), "cache/label.model-output.json");
+    const labelModelOutputPath = join(
+      process.cwd(),
+      "cache/label.model-output.todo.json"
+    );
 
-    // if (existsSync(labelModelOutputPath)) {
-    //     if ( require.hasOwnProperty("cachze")
-    //      &&  require.cache.hasOwnProperty(labelModelOutputPath) ) {
-    //         delete require.cache[labelModelOutputPath];
-    //     }
-    //     const labelsFromModel = require(labelModelOutputPath);
+    if (existsSync(labelModelOutputPath)) {
+      if (
+        require.hasOwnProperty("cache") &&
+        require.cache.hasOwnProperty(labelModelOutputPath)
+      ) {
+        delete require.cache[labelModelOutputPath];
+      }
+      const labelsFromModel = require(labelModelOutputPath);
 
-    //     logger.info("Labels from ML model:");
-    //     logger.info(JSON.stringify(labelsFromModel));
-    // }
+      logger.info("Labels from ML model:");
+      logger.info(JSON.stringify(labelsFromModel));
+
+      for (const labelName in labelsFromModel) {
+        const cardNames = labelsFromModel[labelName];
+        await todoController.addLabelToCardsInListIfTextContains(
+          labelName,
+          cardNames
+        );
+      }
+    }
 
     // TODO: once model implemented, reconsider how autolabelling occurs
-    // TODO: integrate stopwords into the auto-labelling process
 
     /** auto-label cards based on titles */
     logger.info("Adding labels according to keywords in card titles");
@@ -207,7 +220,7 @@ export const ToDoGroomer = function () {
 
     const autoLabelConfigPath = join(
       process.cwd(),
-      "config/auto-label.config.json"
+      "config/auto-label.config.todo.json"
     );
     if (existsSync(autoLabelConfigPath)) {
       const autoLabelConfig = require(autoLabelConfigPath);
@@ -320,7 +333,8 @@ export const ToDoGroomer = function () {
 
     /** auto-link cards which share a label and a common word (>= 3 letters) in title */
     await todoController.autoLinkRelatedCards(
-      require(join(__dirname, "../../config/auto-link.config.json")).ignoreWords
+      require(join(__dirname, "../../config/auto-link.config.todo.json"))
+        .ignoreWords
     );
     // TODO: instead of ignoreWords, could use a stopwords library?
 
@@ -411,7 +425,7 @@ export const ToDoGroomer = function () {
     logger.info(
       "dump JSON data for card labels to train machine learning model"
     );
-    todoController.dump();
+    todoController.dump("todo");
 
     const curTime = new Date();
     const runtime = (curTime.getTime() - start.getTime()) / 1000;

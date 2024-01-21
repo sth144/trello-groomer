@@ -1012,10 +1012,10 @@ export class BoardController<T extends BoardModel> {
     return result;
   }
 
-  public dump(): void {
+  public dump(whichGroomer: string): void {
     // TODO: merge all this label stuff into a single json file
     writeFileSync(
-      join(process.cwd(), "cache/labels.json"),
+      join(process.cwd(), `cache/labels.${whichGroomer}.json`),
       JSON.stringify(this.boardModel.getLabels())
     );
 
@@ -1026,7 +1026,7 @@ export class BoardController<T extends BoardModel> {
       }
     });
     writeFileSync(
-      join(process.cwd(), "cache/label-data.json"),
+      join(process.cwd(), `cache/label-data.${whichGroomer}.json`),
       JSON.stringify(labelData)
     );
 
@@ -1035,12 +1035,12 @@ export class BoardController<T extends BoardModel> {
       .filter((x) => x.idLabels.length === 0)
       .map((x) => x.name);
     writeFileSync(
-      join(process.cwd(), "cache/unlabeled.json"),
+      join(process.cwd(), `cache/unlabeled.${whichGroomer}.json`),
       JSON.stringify(unlabeledCards)
     );
 
     writeFileSync(
-      join(process.cwd(), "cache/model.json"),
+      join(process.cwd(), `cache/model.${whichGroomer}.json`),
       JSON.stringify(this.boardModel, null, 4)
     );
   }

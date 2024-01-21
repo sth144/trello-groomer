@@ -2,6 +2,8 @@ import json
 import re
 import pandas as pd
 import numpy as np
+import nltk; 
+nltk.download('stopwords')
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from sklearn.model_selection import train_test_split
@@ -10,24 +12,31 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.svm import LinearSVC
 from os import path
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('which_groomer', type=str)
+args = parser.parse_args()
+
+which_groomer = args.which_groomer
 
 # TODO: use sklearn's built in neural network support
 # TODO: break these parsing operations into their own functions
 labels = None
-if (path.exists("../../cache/labels.json")):
-    with open("../../cache/labels.json") as data_file:
+if (path.exists(f"../../cache/labels.{which_groomer}.json")):
+    with open(f"../../cache/labels.{which_groomer}.json") as data_file:
         text = data_file.read()
         labels = json.loads(text)
 
 unlabeled_card_names = None
-if (path.exists("../../cache/unlabeled.json")):
-    with open("../../cache/unlabeled.json") as data_file:
+if (path.exists(f"../../cache/unlabeled.{which_groomer}.json")):
+    with open(f"../../cache/unlabeled.{which_groomer}.json") as data_file:
         text = data_file.read()
         unlabeled_card_names = json.loads(text)
 
 training_data = None
-if (path.exists("../cache/label-data.json")):
-    with open("../cache/label-data.json") as data_file:
+if (path.exists(f"../../cache/label-data.{which_groomer}.json")):
+    with open(f"../../cache/label-data.{which_groomer}.json") as data_file:
         text = data_file.read()
         lines = text.split("[{")[1].split("}]")[0].split("},{")
         wrappedlines = []
@@ -40,13 +49,12 @@ data = pd.DataFrame(training_data)
 
 stemmer = SnowballStemmer("english")
 words = stopwords.words("english")
-
 data["cleaned"] = data["name"].apply(
     lambda x: " ".join(
         [stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in words]
     ).lower())
 
-matches = []
+matches = {}
 
 for label in labels:
     data["label:"+label] = data["labels"].apply(
@@ -74,7 +82,7 @@ for label in labels:
         chi = model.named_steps['chi']
         clf = model.named_steps['clf']
 
-        feature_names = vectorizer.get_feature_names()
+        feature_names = vectorizer.get_feature_names_out()
         feature_names = [feature_names[i] for i in chi.get_support(indices=True)]
         feature_names = np.asarray(feature_names)
 
@@ -91,8 +99,11 @@ for label in labels:
         for prediction in predictions:
             if prediction != 0:
                 print("match: " + label + " -- " + unlabeled_card_names[i])
-                matches.append({ label: unlabeled_card_names[i] })
+                if label in matches:
+                    matches[label].append(unlabeled_card_names[i])
+                else:
+                    matches[label] = [unlabeled_card_names[i]]
             i += 1
 
-print("Results: " + matches)
-json.dump(matches, open("../../cache/label.model-output.json", "w+"))
+print(f"Results: {matches}")
+json.dump(matches, open(f"../../cache/label.model-output.{which_groomer}.json", "w+"))
