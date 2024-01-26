@@ -2,5 +2,5 @@ wheel
 numpy
 # scipy
 pandas
-scikit-learn
+# scikit-learn
 audible
