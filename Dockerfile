@@ -16,7 +16,7 @@ RUN apt-get update
 RUN apt-get install -y apache2
 RUN apt-get install -y cmake
 RUN pip install --upgrade setuptools wheel
-RUN pip install numpy`
+RUN pip install numpy
 
 RUN pip install -r requirements.txt
 
