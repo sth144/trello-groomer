@@ -13,7 +13,8 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --upgrade pip
 RUN apt-get update
-RUN apt-get install cmake
+RUN apt-get install -y apache2
+RUN apt-get install -y cmake
 RUN pip install --upgrade setuptools wheel
 RUN pip install numpy`
 
