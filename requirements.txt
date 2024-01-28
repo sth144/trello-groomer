@@ -1,6 +1,6 @@
 wheel
 numpy
-scipy
+# scipy
 pandas
 scikit-learn
 audible
