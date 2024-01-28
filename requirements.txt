@@ -1,6 +1,8 @@
 wheel
+virtualenv
+virtualenvwrapper
 numpy
-# scipy
+scipy
 pandas
 scikit-learn
 audible
