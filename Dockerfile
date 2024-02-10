@@ -15,7 +15,7 @@ RUN pip install --upgrade pip
 RUN apt-get update
 RUN apt-get install -y apache2
 RUN apt-get install -y cmake
-RUN apt-get install -y libblas-dev liblapack-dev gfortran
+RUN apt-get install -y libblas-dev libopenblas-dev liblapack-dev gfortran
 RUN pip install --upgrade setuptools wheel
 RUN pip install numpy
 
