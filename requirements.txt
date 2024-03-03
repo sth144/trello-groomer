@@ -4,6 +4,6 @@ virtualenvwrapper
 numpy
 pandas
 scipy
-scikit-learn
+# scikit-learn
 nltk
-audible
+# audible

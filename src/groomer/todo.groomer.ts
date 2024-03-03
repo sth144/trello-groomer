@@ -153,26 +153,26 @@ export const ToDoGroomer = function () {
       todoController.importListsFromController(historyController);
 
     // simple machine learning model to come up with auto-label mappings
-    logger.info(
-      "Adding labels to unlabeled cards according to machine learning model"
-    );
+    // logger.info(
+    //   "Adding labels to unlabeled cards according to machine learning model"
+    // );
 
-    const { spawn } = require("child_process");
-    const subprocess = spawn("python3", ["label.py", "todo"], {
-      cwd: "./py/model",
-    });
-    subprocess.stdout.on("data", (data: string) => {
-      logger.info(data.toString());
-    });
-    subprocess.stderr.on("data", (err: string) => {
-      logger.info(err.toString());
-    });
-    const closed = new Promise<void>((res) => {
-      subprocess.on("close", () => {
-        res();
-      });
-    });
-    await closed;
+    // const { spawn } = require("child_process");
+    // const subprocess = spawn("python3", ["label.py", "todo"], {
+    //   cwd: "./py/model",
+    // });
+    // subprocess.stdout.on("data", (data: string) => {
+    //   logger.info(data.toString());
+    // });
+    // subprocess.stderr.on("data", (err: string) => {
+    //   logger.info(err.toString());
+    // });
+    // const closed = new Promise<void>((res) => {
+    //   subprocess.on("close", () => {
+    //     res();
+    //   });
+    // });
+    // await closed;
 
     logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
