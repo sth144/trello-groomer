@@ -35,6 +35,10 @@ export class BoardController<T extends BoardModel> {
   private isAlive$ = new ReplaySubject<boolean>(1);
   public isAlive = this.isAlive$.pipe(first()).toPromise();
 
+  public get BoardModel() {
+    return this.boardModel;
+  }
+
   public get AllLabelNames() {
     return Object.keys(this.boardModel.getLabels());
   }
@@ -753,6 +757,41 @@ export class BoardController<T extends BoardModel> {
         );
       }
     }
+  }
+
+  public async getChecklistsForCardId(cardId: string) {
+    return await this.httpClient.asyncGet(`/cards/${cardId}/checklists`);
+  }
+
+  public async addChecklistToCard(
+    cardId: string,
+    checklistName: string
+  ): Promise<void> {
+    const checklist = await this.httpClient.asyncPost(
+      `/cards/${cardId}/checklists`,
+      { name: checklistName }
+    );
+
+    if (checklist) {
+      return checklist;
+    } else {
+      throw new Error("Failed to add checklist to the card.");
+    }
+  }
+
+  public async addCheckItemToChecklist(
+    checklistId: string,
+    itemName: string
+  ): Promise<void> {
+    return await this.httpClient
+      .asyncPost(`/checklists/${checklistId}/checkItems`, {
+        name: itemName,
+        pos: "bottom", // Position the new item at the bottom of the checklist
+        checked: false, // Set checked to false for an unchecked item
+      })
+      .catch((error) => {
+        console.error("Error adding item to the checklist:", error);
+      });
   }
 
   public async syncConfigJsonWithCard(jsonFileName: string, cardName: string) {

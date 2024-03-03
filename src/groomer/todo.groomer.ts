@@ -11,6 +11,7 @@ import {
   Not,
   wasMovedFromToListFilterFactory,
 } from "../lib/card.filters";
+import { processGroceryListItems } from "./todo/grocery-list-items";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
@@ -120,307 +121,311 @@ export const ToDoGroomer = function () {
 
     // TODO: how much of this procedure could be batched/parallelized?
 
-    logger.info("Adding history lists from past 12 months to data model");
-    /**
-     * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
-     *  - this should probably be factored out into groomer, this is not good generalized behavior
-     */
-    const yearnum = start.getFullYear();
-    const monthnum = start.getMonth();
-    await historyController.addListsToModelIfNameMeetsConditions([
-      (x: List) => {
-        return (
-          x.hasOwnProperty("name") &&
-          x.name.match(DateRegexes.MonthYear) !== null
-        );
-      },
-      (x: List) => {
-        if (!x.hasOwnProperty("name")) {
-          return false;
-        }
-        /** if list in current calendar year */
-        return (
-          x.name.indexOf(yearnum.toString()) !== -1 ||
-          /** or list in last calendar year, but within last 12 months */
-          (x.name.indexOf((yearnum - 1).toString()) !== -1 &&
-            getMonthNumFromAbbrev(x.name.substring(0, 3)) > monthnum)
-        );
-      },
-    ]);
+    // logger.info("Adding history lists from past 12 months to data model");
+    // /**
+    //  * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
+    //  *  - this should probably be factored out into groomer, this is not good generalized behavior
+    //  */
+    // const yearnum = start.getFullYear();
+    // const monthnum = start.getMonth();
+    // await historyController.addListsToModelIfNameMeetsConditions([
+    //   (x: List) => {
+    //     return (
+    //       x.hasOwnProperty("name") &&
+    //       x.name.match(DateRegexes.MonthYear) !== null
+    //     );
+    //   },
+    //   (x: List) => {
+    //     if (!x.hasOwnProperty("name")) {
+    //       return false;
+    //     }
+    //     /** if list in current calendar year */
+    //     return (
+    //       x.name.indexOf(yearnum.toString()) !== -1 ||
+    //       /** or list in last calendar year, but within last 12 months */
+    //       (x.name.indexOf((yearnum - 1).toString()) !== -1 &&
+    //         getMonthNumFromAbbrev(x.name.substring(0, 3)) > monthnum)
+    //     );
+    //   },
+    // ]);
 
-    const historyLists =
-      todoController.importListsFromController(historyController);
+    // const historyLists =
+    //   todoController.importListsFromController(historyController);
 
-    // simple machine learning model to come up with auto-label mappings
-    logger.info(
-      "Adding labels to unlabeled cards according to machine learning model"
-    );
+    // // simple machine learning model to come up with auto-label mappings
+    // logger.info(
+    //   "Adding labels to unlabeled cards according to machine learning model"
+    // );
 
-    const { spawn } = require("child_process");
-    const subprocess = spawn("python3", ["label.py", "todo"], {
-      cwd: "./py/model",
-    });
-    subprocess.stdout.on("data", (data: string) => {
-      logger.info(data.toString());
-    });
-    subprocess.stderr.on("data", (err: string) => {
-      logger.info(err.toString());
-    });
-    const closed = new Promise<void>((res) => {
-      subprocess.on("close", () => {
-        res();
-      });
-    });
-    await closed;
+    // const { spawn } = require("child_process");
+    // const subprocess = spawn("python3", ["label.py", "todo"], {
+    //   cwd: "./py/model",
+    // });
+    // subprocess.stdout.on("data", (data: string) => {
+    //   logger.info(data.toString());
+    // });
+    // subprocess.stderr.on("data", (err: string) => {
+    //   logger.info(err.toString());
+    // });
+    // const closed = new Promise<void>((res) => {
+    //   subprocess.on("close", () => {
+    //     res();
+    //   });
+    // });
+    // await closed;
 
-    logger.info(`Cache contents: ${readdirSync("./cache")}`);
+    // logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
-    const labelModelOutputPath = join(
-      process.cwd(),
-      "cache/label.model-output.todo.json"
-    );
+    // const labelModelOutputPath = join(
+    //   process.cwd(),
+    //   "cache/label.model-output.todo.json"
+    // );
 
-    if (existsSync(labelModelOutputPath)) {
-      if (
-        require.hasOwnProperty("cache") &&
-        require.cache.hasOwnProperty(labelModelOutputPath)
-      ) {
-        delete require.cache[labelModelOutputPath];
-      }
-      const labelsFromModel = require(labelModelOutputPath);
+    // if (existsSync(labelModelOutputPath)) {
+    //   if (
+    //     require.hasOwnProperty("cache") &&
+    //     require.cache.hasOwnProperty(labelModelOutputPath)
+    //   ) {
+    //     delete require.cache[labelModelOutputPath];
+    //   }
+    //   const labelsFromModel = require(labelModelOutputPath);
 
-      logger.info("Labels from ML model:");
-      logger.info(JSON.stringify(labelsFromModel));
+    //   logger.info("Labels from ML model:");
+    //   logger.info(JSON.stringify(labelsFromModel));
 
-      for (const labelName in labelsFromModel) {
-        const cardNames = labelsFromModel[labelName];
-        await todoController.addLabelToCardsInListIfTextContains(
-          labelName,
-          cardNames
-        );
-      }
-    }
+    //   for (const labelName in labelsFromModel) {
+    //     const cardNames = labelsFromModel[labelName];
+    //     await todoController.addLabelToCardsInListIfTextContains(
+    //       labelName,
+    //       cardNames
+    //     );
+    //   }
+    // }
 
-    // TODO: once model implemented, reconsider how autolabelling occurs
+    // // TODO: once model implemented, reconsider how autolabelling occurs
 
-    /** auto-label cards based on titles */
-    logger.info("Adding labels according to keywords in card titles");
+    // /** auto-label cards based on titles */
+    // logger.info("Adding labels according to keywords in card titles");
 
-    const addedLabels = new Promise(async (res) => {
-      /** work keyword conflicts with a lot of irrelevant card titles */
-      const allLabels = todoController.AllLabelNames.filter(
-        (x) => x !== "Work"
-      );
-      for (let labelName of allLabels) {
-        await todoController.addLabelToCardsInListIfTextContains(labelName, [
-          labelName,
-        ]);
-      }
-    });
+    // const addedLabels = new Promise(async (res) => {
+    //   /** work keyword conflicts with a lot of irrelevant card titles */
+    //   const allLabels = todoController.AllLabelNames.filter(
+    //     (x) => x !== "Work"
+    //   );
+    //   for (let labelName of allLabels) {
+    //     await todoController.addLabelToCardsInListIfTextContains(labelName, [
+    //       labelName,
+    //     ]);
+    //   }
+    // });
 
-    const autoLabelConfigPath = join(
-      process.cwd(),
-      "config/auto-label.config.todo.json"
-    );
-    if (existsSync(autoLabelConfigPath)) {
-      const autoLabelConfig = require(autoLabelConfigPath);
+    // const autoLabelConfigPath = join(
+    //   process.cwd(),
+    //   "config/auto-label.config.todo.json"
+    // );
+    // if (existsSync(autoLabelConfigPath)) {
+    //   const autoLabelConfig = require(autoLabelConfigPath);
 
-      Object.keys(autoLabelConfig).forEach(async (labelName) => {
-        await todoController.addLabelToCardsInListIfTextContains(
-          labelName,
-          autoLabelConfig[labelName]
-        );
-      });
-    }
+    //   Object.keys(autoLabelConfig).forEach(async (labelName) => {
+    //     await todoController.addLabelToCardsInListIfTextContains(
+    //       labelName,
+    //       autoLabelConfig[labelName]
+    //     );
+    //   });
+    // }
 
-    logger.info("Updating task dependencies");
+    // logger.info("Updating task dependencies");
 
-    /**
-     * groom checklists
-     *  - update task and prep dependencies, generate followups
-     */
-    await todoController.updateTaskDependencies(
-      "Tasks",
-      /** ignore (necessary?) */ historyLists
-    );
-    await todoController.updatePrepDependencies(
-      "Prep",
-      /** ignore (necessary?) */ historyLists
-    );
-    await todoController.updateFollowupDependencies(
-      "Followup",
-      /** ignore (necessary?) */ historyLists
-    );
+    // /**
+    //  * groom checklists
+    //  *  - update task and prep dependencies, generate followups
+    //  */
+    // await todoController.updateTaskDependencies(
+    //   "Tasks",
+    //   /** ignore (necessary?) */ historyLists
+    // );
+    // await todoController.updatePrepDependencies(
+    //   "Prep",
+    //   /** ignore (necessary?) */ historyLists
+    // );
+    // await todoController.updateFollowupDependencies(
+    //   "Followup",
+    //   /** ignore (necessary?) */ historyLists
+    // );
 
-    await todoController.markCardsDoneIfLinkedCheckItemsDone();
-    await todoController.parseDueDatesFromCardNames();
+    // await todoController.markCardsDoneIfLinkedCheckItemsDone();
+    // await todoController.parseDueDatesFromCardNames();
 
-    /** assign due dates to cards without due dates */
-    const autoDueConfigPath = join(
-      process.cwd(),
-      "config/auto-due.config.json"
-    );
-    if (existsSync(autoDueConfigPath)) {
-      const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as {
-        [s: string]: number;
-      };
+    // /** assign due dates to cards without due dates */
+    // const autoDueConfigPath = join(
+    //   process.cwd(),
+    //   "config/auto-due.config.json"
+    // );
+    // if (existsSync(autoDueConfigPath)) {
+    //   const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as {
+    //     [s: string]: number;
+    //   };
 
-      logger.info("Updating due dates based on manual list movements");
+    //   logger.info("Updating due dates based on manual list movements");
 
-      await todoController.assignDueDatesIf(
-        todoModel.lists.backlog.id,
-        autoDueConfig.backlog,
-        wasMovedFromToListFilterFactory(todoModel.lists.backlog.id, [
-          todoModel.lists.month.id,
-          todoModel.lists.week.id,
-          todoModel.lists.tomorrow.id,
-          todoModel.lists.day.id,
-        ]),
-        7 /** one week of random stagger (unique on per card basis, not per call to assignDueDatesIf */
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.month.id,
-        Math.floor(autoDueConfig.month),
-        wasMovedFromToListFilterFactory(todoModel.lists.month.id, [
-          todoModel.lists.week.id,
-          todoModel.lists.tomorrow.id,
-          todoModel.lists.day.id,
-        ])
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.week.id,
-        autoDueConfig.week,
-        wasMovedFromToListFilterFactory(todoModel.lists.week.id, [
-          todoModel.lists.tomorrow.id,
-          todoModel.lists.day.id,
-        ])
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.tomorrow.id,
-        autoDueConfig.tomorrow,
-        wasMovedFromToListFilterFactory(todoModel.lists.tomorrow.id, [
-          todoModel.lists.day.id,
-        ])
-      );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.backlog.id,
+    //     autoDueConfig.backlog,
+    //     wasMovedFromToListFilterFactory(todoModel.lists.backlog.id, [
+    //       todoModel.lists.month.id,
+    //       todoModel.lists.week.id,
+    //       todoModel.lists.tomorrow.id,
+    //       todoModel.lists.day.id,
+    //     ]),
+    //     7 /** one week of random stagger (unique on per card basis, not per call to assignDueDatesIf */
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.month.id,
+    //     Math.floor(autoDueConfig.month),
+    //     wasMovedFromToListFilterFactory(todoModel.lists.month.id, [
+    //       todoModel.lists.week.id,
+    //       todoModel.lists.tomorrow.id,
+    //       todoModel.lists.day.id,
+    //     ])
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.week.id,
+    //     autoDueConfig.week,
+    //     wasMovedFromToListFilterFactory(todoModel.lists.week.id, [
+    //       todoModel.lists.tomorrow.id,
+    //       todoModel.lists.day.id,
+    //     ])
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.tomorrow.id,
+    //     autoDueConfig.tomorrow,
+    //     wasMovedFromToListFilterFactory(todoModel.lists.tomorrow.id, [
+    //       todoModel.lists.day.id,
+    //     ])
+    //   );
 
-      await todoController.assignDueDatesIf(
-        todoModel.lists.day.id,
-        autoDueConfig.day,
-        Not(cardHasDueDate)
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.tomorrow.id,
-        autoDueConfig.tomorrow,
-        Not(cardHasDueDate)
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.week.id,
-        autoDueConfig.week,
-        Not(cardHasDueDate)
-      );
-      /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
-      await todoController.assignDueDatesIf(
-        todoModel.lists.month.id,
-        Math.floor(autoDueConfig.month),
-        Not(cardHasDueDate)
-      );
-      await todoController.assignDueDatesIf(
-        todoModel.lists.backlog.id,
-        autoDueConfig.backlog,
-        Not(cardHasDueDate)
-      );
-    }
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.day.id,
+    //     autoDueConfig.day,
+    //     Not(cardHasDueDate)
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.tomorrow.id,
+    //     autoDueConfig.tomorrow,
+    //     Not(cardHasDueDate)
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.week.id,
+    //     autoDueConfig.week,
+    //     Not(cardHasDueDate)
+    //   );
+    //   /** divide remaining days in 2 to stagger due dates avoid build up on last day of month */
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.month.id,
+    //     Math.floor(autoDueConfig.month),
+    //     Not(cardHasDueDate)
+    //   );
+    //   await todoController.assignDueDatesIf(
+    //     todoModel.lists.backlog.id,
+    //     autoDueConfig.backlog,
+    //     Not(cardHasDueDate)
+    //   );
+    // }
 
-    /** auto-link cards which share a label and a common word (>= 3 letters) in title */
-    await todoController.autoLinkRelatedCards(
-      require(join(__dirname, "../../config/auto-link.config.todo.json"))
-        .ignoreWords
-    );
-    // TODO: instead of ignoreWords, could use a stopwords library?
+    // /** auto-link cards which share a label and a common word (>= 3 letters) in title */
+    // await todoController.autoLinkRelatedCards(
+    //   require(join(__dirname, "../../config/auto-link.config.todo.json"))
+    //     .ignoreWords
+    // );
+    // // TODO: instead of ignoreWords, could use a stopwords library?
 
-    logger.info("Updating list placements");
+    // logger.info("Updating list placements");
 
-    /** move completed items to Done */
-    await todoController.moveCardsFromToIf(
-      [
-        todoModel.lists.inbox.id,
-        todoModel.lists.backlog.id,
-        todoModel.lists.month.id,
-        todoModel.lists.week.id,
-        todoModel.lists.tomorrow.id,
-        todoModel.lists.day.id,
-      ],
-      todoModel.lists.done.id,
-      cardIsComplete
-    );
+    // /** move completed items to Done */
+    // await todoController.moveCardsFromToIf(
+    //   [
+    //     todoModel.lists.inbox.id,
+    //     todoModel.lists.backlog.id,
+    //     todoModel.lists.month.id,
+    //     todoModel.lists.week.id,
+    //     todoModel.lists.tomorrow.id,
+    //     todoModel.lists.day.id,
+    //   ],
+    //   todoModel.lists.done.id,
+    //   cardIsComplete
+    // );
 
-    /** move cards due today to Today */
-    await todoController.moveCardsFromToIf(
-      [
-        todoModel.lists.inbox.id,
-        todoModel.lists.backlog.id,
-        todoModel.lists.month.id,
-        todoModel.lists.week.id,
-        todoModel.lists.tomorrow.id,
-      ],
-      todoModel.lists.day.id,
-      cardDueToday
-    );
+    // /** move cards due today to Today */
+    // await todoController.moveCardsFromToIf(
+    //   [
+    //     todoModel.lists.inbox.id,
+    //     todoModel.lists.backlog.id,
+    //     todoModel.lists.month.id,
+    //     todoModel.lists.week.id,
+    //     todoModel.lists.tomorrow.id,
+    //   ],
+    //   todoModel.lists.day.id,
+    //   cardDueToday
+    // );
 
-    /** move cards due tomorrow (or day after) to Tomorrow */
-    await todoController.moveCardsFromToIf(
-      [
-        todoModel.lists.inbox.id,
-        todoModel.lists.backlog.id,
-        todoModel.lists.month.id,
-        todoModel.lists.week.id,
-      ],
-      todoModel.lists.tomorrow.id,
-      cardDueWithinTwoDays
-    );
+    // /** move cards due tomorrow (or day after) to Tomorrow */
+    // await todoController.moveCardsFromToIf(
+    //   [
+    //     todoModel.lists.inbox.id,
+    //     todoModel.lists.backlog.id,
+    //     todoModel.lists.month.id,
+    //     todoModel.lists.week.id,
+    //   ],
+    //   todoModel.lists.tomorrow.id,
+    //   cardDueWithinTwoDays
+    // );
 
-    /** move cards due this week to Week */
-    await todoController.moveCardsFromToIf(
-      [
-        todoModel.lists.inbox.id,
-        todoModel.lists.backlog.id,
-        todoModel.lists.month.id,
-      ],
-      todoModel.lists.week.id,
-      cardDueThisWeek
-    );
+    // /** move cards due this week to Week */
+    // await todoController.moveCardsFromToIf(
+    //   [
+    //     todoModel.lists.inbox.id,
+    //     todoModel.lists.backlog.id,
+    //     todoModel.lists.month.id,
+    //   ],
+    //   todoModel.lists.week.id,
+    //   cardDueThisWeek
+    // );
 
-    /** move cards due this month to month */
-    await todoController.moveCardsFromToIf(
-      [todoModel.lists.inbox.id, todoModel.lists.backlog.id],
-      todoModel.lists.month.id,
-      cardDueThisMonth
-    );
+    // /** move cards due this month to month */
+    // await todoController.moveCardsFromToIf(
+    //   [todoModel.lists.inbox.id, todoModel.lists.backlog.id],
+    //   todoModel.lists.month.id,
+    //   cardDueThisMonth
+    // );
 
-    /** move all cards in inbox with due date to backlog */
-    await todoController.moveCardsFromToIf(
-      [todoModel.lists.inbox.id],
-      todoModel.lists.backlog.id,
-      cardHasDueDate
-    );
+    // /** move all cards in inbox with due date to backlog */
+    // await todoController.moveCardsFromToIf(
+    //   [todoModel.lists.inbox.id],
+    //   todoModel.lists.backlog.id,
+    //   cardHasDueDate
+    // );
 
-    logger.info("Marking appropriate items done");
+    // logger.info("Marking appropriate items done");
 
-    await todoController.markCardsInListDone(todoModel.lists.done.id);
+    // await todoController.markCardsInListDone(todoModel.lists.done.id);
+
+    // logger.info("Processing grocery list items");
+
+    await processGroceryListItems(todoController);
 
     logger.info("Pruning repeat-labeled cards from history lists");
 
-    historyLists.forEach(async (historyList) => {
-      await historyController.deleteCardsInListIfLabeled(
-        historyList.id,
-        "Recurring"
-      );
-    });
+    // historyLists.forEach(async (historyList) => {
+    //   await historyController.deleteCardsInListIfLabeled(
+    //     historyList.id,
+    //     "Recurring"
+    //   );
+    // });
 
-    logger.info("Removing due dates from cards in backburner list");
-    await todoController.removeDueDateFromCardsInList(
-      todoModel.lists.backburner.id
-    );
+    // logger.info("Removing due dates from cards in backburner list");
+    // await todoController.removeDueDateFromCardsInList(
+    //   todoModel.lists.backburner.id
+    // );
 
     logger.info(
       "dump JSON data for card labels to train machine learning model"
