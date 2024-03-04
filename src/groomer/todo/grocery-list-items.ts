@@ -20,6 +20,9 @@ export async function processGroceryListItems(
 
   // TODO: filter out DONE
   const doneListId = todoController.BoardModel.getListByName("Done").id;
+  const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
+  const thisMonthListId =
+    todoController.BoardModel.getListByName("This Month").id;
 
   /** locate latest/soonest due card with "Grocery" or "Groceries" in title */
   const existingGroceryListCards = allCards
@@ -33,6 +36,9 @@ export async function processGroceryListItems(
       );
     })
     .filter((card) => card.idList !== doneListId)
+    // ignore cards in backlog or month
+    .filter((card) => card.idList !== backlogListId)
+    .filter((card) => card.idList !== thisMonthListId)
     .sort((A, B) => {
       const dateA = A.due || new Date("9999-12-31"); // If dueDate is null/undefined, set it to a future date
       const dateB = B.due || new Date("9999-12-31");
