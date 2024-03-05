@@ -50,13 +50,11 @@ export async function processGroceryListItems(
       return 0;
     });
   console.log("Grocery Lists");
-  console.log(existingGroceryListCards);
 
   let latestDueGroceryListCard = null;
   if (existingGroceryListCards.length > 0) {
     latestDueGroceryListCard = existingGroceryListCards[0];
   }
-  console.log(latestDueGroceryListCard);
 
   if (!latestDueGroceryListCard) {
     // TODO: if no card found, create from template
@@ -80,7 +78,7 @@ export async function processGroceryListItems(
 
   /** find a checklist within grocery card */
 
-  const checklists = await todoController.getChecklistsForCardId(
+  let checklists = await todoController.getChecklistsForCardId(
     latestDueGroceryListCard.id
   );
 
@@ -94,7 +92,7 @@ export async function processGroceryListItems(
     );
     console.log("Successfully added new checklist");
 
-    checklists.push(newChecklist);
+    checklists = [newChecklist];
   }
 
   // TODO: prefer "Checklist" checklist if possible
