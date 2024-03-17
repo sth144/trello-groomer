@@ -59,6 +59,8 @@ export async function processGroceryListItems(
   if (!latestDueGroceryListCard) {
     // TODO: if no card found, create from template
 
+    console.log("No card found, creating");
+
     const thisWeekListId =
       todoController.BoardModel.getListByName("This Week").id;
 
@@ -76,11 +78,16 @@ export async function processGroceryListItems(
     console.log(latestDueGroceryListCard);
   }
 
+  console.log("Getting checklists from grocery card");
+
   /** find a checklist within grocery card */
 
   let checklists = await todoController.getChecklistsForCardId(
     latestDueGroceryListCard.id
   );
+
+  console.log("Got checklists:");
+  console.log(checklists);
 
   if (checklists.length === 0) {
     // if no checklist found, create one!!! and update checklists var
@@ -102,6 +109,7 @@ export async function processGroceryListItems(
 
   /** add items if they're not there */
   for (const newItem of groceryListItems) {
+    console.log(`Adding item ${newItem} to checklist ${targetChecklist.name}`);
     if (
       !targetChecklist.checkItems.some((item: CheckItem) =>
         item.name.toLowerCase().includes(newItem.toLowerCase())

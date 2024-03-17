@@ -542,9 +542,11 @@ export class BoardController<T extends BoardModel> {
     await Promise.all(batch);
   }
 
-  public async addLabelToCardsInListIfTextContains(
+  public async addLabelToCardsIfTextContains(
     labelName: string,
-    checkFor: string[]
+    checkFor: string[],
+    maxCardCount: number = Infinity,
+    intervalMs: number | null = null
   ): Promise<void> {
     checkFor = checkFor.map((x) => x !== undefined && x.toLowerCase());
 
@@ -555,8 +557,10 @@ export class BoardController<T extends BoardModel> {
     ) {
       const labelId = this.boardModel.getLabels()[labelName];
 
+      let cardCount: number = 0;
+
       this.boardModel.getAllCards().forEach(async (card) => {
-        if (card.name === undefined) {
+        if (card.name === undefined || cardCount > maxCardCount) {
           return;
         }
 
@@ -568,10 +572,23 @@ export class BoardController<T extends BoardModel> {
           checkFor.some((x) => cardText.indexOf(x) !== -1) &&
           card.idLabels.indexOf(labelId) === -1
         ) {
+          console.log(
+            `LABEL ${cardCount} ${labelName} ${labelId} ${
+              card.name
+            } ${JSON.stringify(card.idLabels)}`
+          );
           await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
             value: labelId,
           });
           card.idLabels.push(labelId);
+        }
+        cardCount++;
+        if (intervalMs !== null) {
+          await new Promise<void>((res, rej) => {
+            setTimeout(() => {
+              res();
+            }, intervalMs);
+          });
         }
       });
     }
@@ -950,6 +967,8 @@ export class BoardController<T extends BoardModel> {
     if (typeof labelResponse === "string") {
       labelResponse = JSON.parse(labelResponse);
     }
+
+    console.log(`Got labels ${JSON.stringify(labelResponse)}`);
 
     labelResponse = <any>labelResponse.map((label: Record<string, string>) => {
       if (

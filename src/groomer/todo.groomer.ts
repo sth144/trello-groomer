@@ -195,9 +195,11 @@ export const ToDoGroomer = function () {
 
       for (const labelName in labelsFromModel) {
         const cardNames = labelsFromModel[labelName];
-        await todoController.addLabelToCardsInListIfTextContains(
+        await todoController.addLabelToCardsIfTextContains(
           labelName,
-          cardNames
+          cardNames,
+          5,
+          1000
         );
       }
     }
@@ -213,9 +215,12 @@ export const ToDoGroomer = function () {
         (x) => x !== "Work"
       );
       for (let labelName of allLabels) {
-        await todoController.addLabelToCardsInListIfTextContains(labelName, [
+        await todoController.addLabelToCardsIfTextContains(
           labelName,
-        ]);
+          [labelName],
+          5,
+          1000
+        );
       }
     });
 
@@ -226,12 +231,17 @@ export const ToDoGroomer = function () {
     if (existsSync(autoLabelConfigPath)) {
       const autoLabelConfig = require(autoLabelConfigPath);
 
-      Object.keys(autoLabelConfig).forEach(async (labelName) => {
-        await todoController.addLabelToCardsInListIfTextContains(
-          labelName,
-          autoLabelConfig[labelName]
-        );
-      });
+      Object.keys(autoLabelConfig)
+        .sort(() => Math.random() - 0.5)
+        .slice()
+        .forEach(async (labelName) => {
+          await todoController.addLabelToCardsIfTextContains(
+            labelName,
+            autoLabelConfig[labelName],
+            5,
+            1000
+          );
+        });
     }
 
     logger.info("Updating task dependencies");

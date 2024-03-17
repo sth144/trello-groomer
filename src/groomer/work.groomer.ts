@@ -118,7 +118,7 @@ export const WorkGroomer = function () {
           (x) => x !== "Work"
         );
         for (let labelName of allLabels) {
-          await workController.addLabelToCardsInListIfTextContains(labelName, [
+          await workController.addLabelToCardsIfTextContains(labelName, [
             labelName,
           ]);
         }
@@ -131,7 +131,7 @@ export const WorkGroomer = function () {
         const autoLabelConfig = require(autoLabelConfigPath);
 
         Object.keys(autoLabelConfig).forEach(async (labelName) => {
-          await workController.addLabelToCardsInListIfTextContains(
+          await workController.addLabelToCardsIfTextContains(
             labelName,
             autoLabelConfig[labelName]
           );
@@ -182,7 +182,7 @@ export const WorkGroomer = function () {
 
       for (const labelName in labelsFromModel) {
         const cardNames = labelsFromModel[labelName];
-        await workController.addLabelToCardsInListIfTextContains(
+        await workController.addLabelToCardsIfTextContains(
           labelName,
           cardNames
         );

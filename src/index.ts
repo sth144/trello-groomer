@@ -22,7 +22,10 @@ writeFileSync(
 process.on("unhandledRejection", (reason: any, p: Promise<any>) => {
   logger.error(reason);
 });
-
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception:");
+  logger.error(error.stack);
+});
 const CronJob = require("cron").CronJob;
 
 let mainMutex = false,
