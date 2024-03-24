@@ -47,16 +47,19 @@ export async function processGroceryListItems(
     // ignore cards in backlog or month
     .filter((card) => card.idList !== backlogListId)
     .filter((card) => card.idList !== thisMonthListId)
-    .filter((card) =>
-      [inboxListId, thisWeekListId, tomorrowListId, todayListId].includes(
-        card.idList
-      )
-    )
     .filter((card) => {
-      const cardDue = new Date(card.due);
-      return cardDue < currentDate;
+      return [
+        inboxListId,
+        thisWeekListId,
+        tomorrowListId,
+        todayListId,
+      ].includes(card.idList);
     })
-    .filter((card) => card.idBoard === boards.todo.id)
+    // .filter((card) => {
+    //   const cardDue = new Date(card.due);
+    //   return cardDue < currentDate;
+    // })
+    // .filter((card) => card.idBoard === boards.todo.id)
     .sort((A, B) => {
       const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
       const dateB = B.due || new Date("1971-12-31");
