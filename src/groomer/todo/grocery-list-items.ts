@@ -1,6 +1,7 @@
 import { BoardController } from "@base/controller/board.controller";
 import { ToDoBoardModel } from "../todo.groomer";
 import { CheckItem } from "@base/lib/checklist.interface";
+const boards = require("../../../config/boards.json");
 
 const GROCERY_LIST_ITEM_TAG = "[grocery list item]";
 const GROCERY_LIST_CARD_KEYWORDS = ["grocery", "groceries"];
@@ -23,6 +24,13 @@ export async function processGroceryListItems(
   const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
   const thisMonthListId =
     todoController.BoardModel.getListByName("This Month").id;
+  const inboxListId = todoController.BoardModel.getListByName("Inbox").id;
+  const thisWeekListId =
+    todoController.BoardModel.getListByName("This Week").id;
+  const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
+  const todayListId = todoController.BoardModel.getListByName("Today").id;
+
+  const currentDate = new Date();
 
   /** locate latest/soonest due card with "Grocery" or "Groceries" in title */
   const existingGroceryListCards = allCards
@@ -39,9 +47,19 @@ export async function processGroceryListItems(
     // ignore cards in backlog or month
     .filter((card) => card.idList !== backlogListId)
     .filter((card) => card.idList !== thisMonthListId)
+    .filter((card) =>
+      [inboxListId, thisWeekListId, tomorrowListId, todayListId].includes(
+        card.idList
+      )
+    )
+    .filter((card) => {
+      const cardDue = new Date(card.due);
+      return cardDue < currentDate;
+    })
+    .filter((card) => card.idBoard === boards.todo.id)
     .sort((A, B) => {
-      const dateA = A.due || new Date("9999-12-31"); // If dueDate is null/undefined, set it to a future date
-      const dateB = B.due || new Date("9999-12-31");
+      const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
+      const dateB = B.due || new Date("1971-12-31");
       if (dateA > dateB) {
         return -1;
       } else if (dateB < dateA) {
@@ -50,6 +68,7 @@ export async function processGroceryListItems(
       return 0;
     });
   console.log("Grocery Lists");
+  console.log(existingGroceryListCards);
 
   let latestDueGroceryListCard = null;
   if (existingGroceryListCards.length > 0) {
@@ -59,17 +78,16 @@ export async function processGroceryListItems(
   if (!latestDueGroceryListCard) {
     // TODO: if no card found, create from template
 
-    console.log("No card found, creating");
-
-    const thisWeekListId =
-      todoController.BoardModel.getListByName("This Week").id;
-
-    console.log(thisWeekListId);
+    console.log("No card found, creating card in list");
+    console.log(tomorrowListId);
 
     const newCard = await todoController.addCard({
       name: "Groceries & Errands",
-      idList: thisWeekListId,
+      idList: tomorrowListId,
     });
+
+    console.log("New Card");
+    console.log(newCard);
 
     await todoController.addChecklistToCard(newCard.id, "Checklist");
     await todoController.addChecklistToCard(newCard.id, "Stores");
