@@ -84,10 +84,12 @@ export async function processGroceryListItems(
     console.log("No card found, creating card in list");
     console.log(tomorrowListId);
 
-    const newCard = await todoController.addCard({
-      name: "Groceries & Errands",
-      idList: tomorrowListId,
-    });
+    const newCard = await todoController.addCard(
+      {
+        name: "Groceries & Errands",
+      },
+      tomorrowListId
+    );
 
     console.log("New Card");
     console.log(newCard);

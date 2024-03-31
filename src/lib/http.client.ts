@@ -96,7 +96,11 @@ export class TrelloHttpClient {
     });
   }
 
-  public async asyncPost(url: string, opts: any): Promise<any> {
+  public async asyncPost(
+    url: string,
+    opts: any,
+    body: any = null
+  ): Promise<any> {
     this.numRequestsSent++;
 
     logger.info(`POST ${url} ${JSON.stringify(opts)}`);
@@ -112,6 +116,7 @@ export class TrelloHttpClient {
           method: "POST",
           uri: uri,
           timeout: 60000,
+          body,
         },
         (err: Error, response: Response, body: string) => {
           let result = null;
