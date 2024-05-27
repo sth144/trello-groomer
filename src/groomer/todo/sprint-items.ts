@@ -19,7 +19,6 @@ export async function processSprintListItems(
   /** extract descriptions from each */
   const sprintListItems = sprintListItemCards.map((card) => card.desc);
 
-  // TODO: filter out DONE
   const doneListId = todoController.BoardModel.getListByName("Done").id;
   const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
   const thisMonthListId =
@@ -84,10 +83,13 @@ export async function processSprintListItems(
     console.log("No card found, creating card in list");
     console.log(tomorrowListId);
 
-    const newCard = await todoController.addCard({
-      name: "Sprint",
-      idList: tomorrowListId,
-    });
+    const newCard = await todoController.addCard(
+      {
+        name: "Sprint",
+      },
+      tomorrowListId,
+      false
+    );
 
     console.log("New Card");
     console.log(newCard);

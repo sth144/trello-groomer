@@ -69,9 +69,17 @@ export class BoardController<T extends BoardModel> {
     toListId: string = this.boardModel.getLists().hasOwnProperty("inbox")
       ? /* don't rely on / assume existence of inbox list... */
         (this.boardModel.getLists() as { inbox: { id: string } }).inbox.id
-      : undefined
+      : undefined,
+    idListAsQueryParam = true
   ): Promise<ICard> {
-    return await this.httpClient.asyncPost(`/cards?idList=${toListId}`, opts);
+    let url = "/cards";
+    if (idListAsQueryParam) {
+      url += `?idList=${toListId}`;
+    }
+    Object.assign(opts, {
+      idList: toListId,
+    });
+    return await this.httpClient.asyncPost(url, opts);
   }
 
   public hasLabelFilterFactory(labelName: string) {
