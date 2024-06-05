@@ -88,7 +88,8 @@ export async function processGroceryListItems(
       {
         name: "Groceries & Errands",
       },
-      tomorrowListId
+      tomorrowListId,
+      false
     );
 
     console.log("New Card");
