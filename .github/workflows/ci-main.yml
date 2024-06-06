@@ -39,3 +39,4 @@ jobs:
         run: |
           docker buildx build --cache-to type=local,dest=/tmp/.buildx-cache --platform "linux/arm/v7" --tag sthinds/trello-groomer:latest .
           docker buildx imagetools inspect sthinds/trello-groomer:latest --format '{{json .}}'
+          docker buildx push sthinds/trello-groomer:latest
