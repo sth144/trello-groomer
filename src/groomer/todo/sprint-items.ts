@@ -3,7 +3,7 @@ import { ToDoBoardModel } from "../todo.groomer";
 import { CheckItem } from "@base/lib/checklist.interface";
 const boards = require("../../../config/boards.json");
 
-const SPRINT_LIST_ITEM_TAG = "[sprint list item]";
+const SPRINT_LIST_ITEM_TAG = "[sprint item]";
 const SPRINT_LIST_CARD_KEYWORDS = ["sprint"];
 
 export async function processSprintListItems(
