@@ -37,5 +37,5 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Build & Push Docker image
         run: |
-          docker buildx build --cache-to type=local,dest=/tmp/.buildx-cache --platform "linux/arm/v7,linux/amd64" --tag sthinds/trello-groomer:latest --push .
+          docker buildx build --cache-to type=local,dest=/tmp/.buildx-cache --platform "linux/arm/v7" --tag sthinds/trello-groomer:latest --push .
           docker buildx imagetools inspect sthinds/trello-groomer:latest --format '{{json .}}'
