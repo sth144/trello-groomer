@@ -884,7 +884,7 @@ export class BoardController<T extends BoardModel> {
    * initialize the board model (pull data from Trello)
    */
   private async buildModel(): Promise<void> {
-    logger.info("Retrieving lists");
+    logger.info(`Retrieving lists /board/${this.boardModel.id}/lists`);
     // TODO: can these requests be batched?
     /**
      * get all lists on board, map to lists specified on BoardModel
@@ -898,7 +898,9 @@ export class BoardController<T extends BoardModel> {
 
     const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
     for (const responseList of this.allListsOnBoard) {
+      console.log(`handling ${responseList}`);
       for (const listNameToFetch of this.boardModel.getListNames()) {
+        console.log(`handling ${listNameToFetch}`);
         if (
           responseList.name !== undefined &&
           responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1
