@@ -819,6 +819,17 @@ export class BoardController<T extends BoardModel> {
       });
   }
 
+  public async removeCheckItemFromChecklist(
+    checklistId: string,
+    checkItemId: string
+  ): Promise<void> {
+    return await this.httpClient
+      .asyncDelete(`/checklists/${checklistId}/checkItems/${checkItemId}/`)
+      .catch((error) => {
+        console.error(`Failed to delete checklist item ${error}`);
+      });
+  }
+
   public async syncConfigJsonWithCard(jsonFileName: string, cardName: string) {
     const targetConfigSyncCard = this.boardModel.getCardByName(cardName);
     const configPath = join(process.cwd(), "config", jsonFileName);
@@ -898,9 +909,9 @@ export class BoardController<T extends BoardModel> {
 
     const modelListsHandle = this.boardModel.getLists() as Record<string, List>;
     for (const responseList of this.allListsOnBoard) {
-      console.log(`handling ${responseList}`);
+      logger.info(`handling response list ${JSON.stringify(responseList)}`);
       for (const listNameToFetch of this.boardModel.getListNames()) {
-        console.log(`handling ${listNameToFetch}`);
+        logger.info(`fetching list ${listNameToFetch}`);
         if (
           responseList.name !== undefined &&
           responseList.name.toLowerCase().indexOf(listNameToFetch) !== -1

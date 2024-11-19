@@ -30,8 +30,6 @@ export async function processGroceryListItems(
   const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
   const todayListId = todoController.BoardModel.getListByName("Today").id;
 
-  const currentDate = new Date();
-
   /** locate latest/soonest due card with "Grocery" or "Groceries" in title */
   const existingGroceryListCards = allCards
     .filter((card) => {
@@ -79,26 +77,14 @@ export async function processGroceryListItems(
   }
 
   if (!latestDueGroceryListCard) {
-    // TODO: if no card found, create from template
-
+    /** if no card found, create from template */
     console.log("No card found, creating card in list");
     console.log(tomorrowListId);
-
-    const newCard = await todoController.addCard(
-      {
-        name: "Groceries & Errands",
-      },
-      tomorrowListId,
-      false
+    latestDueGroceryListCard = await createNewGroceryListCardFromTemplate(
+      todoController,
+      tomorrowListId
     );
 
-    console.log("New Card");
-    console.log(newCard);
-
-    await todoController.addChecklistToCard(newCard.id, "Checklist");
-    await todoController.addChecklistToCard(newCard.id, "Stores");
-
-    latestDueGroceryListCard = newCard;
     console.log(latestDueGroceryListCard);
   }
 
@@ -126,9 +112,54 @@ export async function processGroceryListItems(
     checklists = [newChecklist];
   }
 
-  // TODO: prefer "Checklist" checklist if possible
+  let targetChecklist = checklists[0];
 
-  const targetChecklist = checklists[0];
+  let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
+    (item: CheckItem) => item.state === "complete"
+  ).length;
+  let targetChecklistTotalItems = targetChecklist.checkItems.length;
+
+  /** roll over to a new card if more than 20 items and more than half complete */
+  if (
+    targetChecklist.checkItems.length > 20 &&
+    targetChecklistItemsComplete / targetChecklistTotalItems > 0.5
+  ) {
+    /** create a new card */
+    latestDueGroceryListCard = await createNewGroceryListCardFromTemplate(
+      todoController,
+      tomorrowListId
+    );
+
+    let originalChecklist = targetChecklist;
+
+    /** get checklist on new card */
+    targetChecklist = (
+      await todoController.getChecklistsForCardId(latestDueGroceryListCard.id)
+    )[0];
+
+    /** move "incomplete" state items from original card to a new checklist */
+    originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
+      if (checkItem.state === "incomplete") {
+        try {
+          await todoController.addCheckItemToChecklist(
+            targetChecklist.id,
+            checkItem.name
+          );
+
+          /** delete incomplete state items from original card checklist */
+          await todoController.removeCheckItemFromChecklist(
+            originalChecklist.id,
+            checkItem.id
+          );
+        } catch (e) {
+          console.log(
+            `Failed to move checklist item: ${JSON.stringify(checkItem)}`
+          );
+        }
+      }
+    });
+  }
+
   const itemsToDeleteCardFor = [];
 
   /** add items if they're not there */
@@ -156,4 +187,25 @@ export async function processGroceryListItems(
       todoController.deleteCardByID(card.id);
     }
   }
+}
+
+async function createNewGroceryListCardFromTemplate(
+  todoController: BoardController<ToDoBoardModel>,
+  tomorrowListId: string
+) {
+  const newCard = await todoController.addCard(
+    {
+      name: "Groceries & Errands",
+    },
+    tomorrowListId,
+    false
+  );
+
+  console.log("New Card");
+  console.log(newCard);
+
+  await todoController.addChecklistToCard(newCard.id, "Checklist");
+  await todoController.addChecklistToCard(newCard.id, "Stores");
+
+  return newCard;
 }
