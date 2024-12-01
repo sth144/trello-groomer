@@ -14,7 +14,7 @@ jobs:
         env:
           GITLAB_API_URL: "https://gitlab.sth144.duckdns.org/api/v4/projects/gitlab-devops-hub/pipeline"
         run: |
-          curl -X POST $GITLAB_API_URL -H "Private-Token: $GITLAB_ACCESS_TOKEN" -H "Content-Type: application/json"
+          curl -X POST -H "Private-Token: $GITLAB_ACCESS_TOKEN" -H "Content-Type: application/json" $GITLAB_API_URL
   docker:
     runs-on: ubuntu-latest
     steps:
