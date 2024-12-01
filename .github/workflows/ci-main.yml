@@ -16,7 +16,6 @@ jobs:
         run: |
           curl \
             -X POST \
-            -H "Private-Token: $GITLAB_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
+            -H "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
             --data "ref=master" \
             $GITLAB_API_URL
