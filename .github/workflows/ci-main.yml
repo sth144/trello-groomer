@@ -14,6 +14,7 @@ jobs:
         env:
           GITLAB_API_URL: "https://gitlab.sth144.duckdns.org/api/v4/projects/2/pipeline"
         run: |
+          echo GITLAB_ACCESS_TOKEN
           curl \
             -X POST \
             -H "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
