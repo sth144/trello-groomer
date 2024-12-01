@@ -13,7 +13,6 @@ jobs:
       - name: Trigger GitLab Pipeline
         env:
           GITLAB_API_URL: "https://gitlab.sth144.duckdns.org/api/v4/projects/gitlab-devops-hub/pipeline"
-          GITLAB_TOKEN: ${{ variables.GITLAB_ACCESS_TOKEN }}
         run: |
           curl -X POST $GITLAB_API_URL
               -H "Private-Token: $GITLAB_ACCESS_TOKEN"
