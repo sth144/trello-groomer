@@ -20,4 +20,5 @@ jobs:
             -X POST \
             -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
             --data "ref=main" \
+            --form "variables[REPO]=trello-groomer"
             $GITLAB_API_URL
