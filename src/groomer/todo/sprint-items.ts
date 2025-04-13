@@ -3,8 +3,8 @@ import { ToDoBoardModel } from "../todo.groomer";
 import { CheckItem } from "@base/lib/checklist.interface";
 const boards = require("../../../config/boards.json");
 
-const SPRINT_LIST_ITEM_TAG = "[sprint item]";
-const SPRINT_LIST_CARD_KEYWORDS = ["sprint"];
+const SPRINT_LIST_ITEM_TAG = "[sprint list item]";
+const SPRINT_LIST_CARD_KEYWORDS = ["sprint", "sprints"];
 
 export async function processSprintListItems(
   todoController: BoardController<ToDoBoardModel>
@@ -19,6 +19,7 @@ export async function processSprintListItems(
   /** extract descriptions from each */
   const sprintListItems = sprintListItemCards.map((card) => card.desc);
 
+  // TODO: filter out DONE
   const doneListId = todoController.BoardModel.getListByName("Done").id;
   const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
   const thisMonthListId =
@@ -29,10 +30,8 @@ export async function processSprintListItems(
   const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
   const todayListId = todoController.BoardModel.getListByName("Today").id;
 
-  const currentDate = new Date();
-
-  /** locate latest/soonest due card with "Sprint" or "Sprint" in title */
-  const existingSprintListCards = allCards
+  /** locate latest/soonest due card with "Sprint"  in title */
+  const existingSprintItemListCards = allCards
     .filter((card) => {
       const lowerCaseName = card.name.toLowerCase();
       return (
@@ -70,35 +69,23 @@ export async function processSprintListItems(
       return 0;
     });
   console.log("Sprint Lists");
-  console.log(existingSprintListCards);
+  console.log(existingSprintItemListCards);
 
-  let latestDueSprintListCard = null;
-  if (existingSprintListCards.length > 0) {
-    latestDueSprintListCard = existingSprintListCards[0];
+  let latestDueSprintItemListCard = null;
+  if (existingSprintItemListCards.length > 0) {
+    latestDueSprintItemListCard = existingSprintItemListCards[0];
   }
 
-  if (!latestDueSprintListCard) {
-    // TODO: if no card found, create from template
-
+  if (!latestDueSprintItemListCard) {
+    /** if no card found, create from template */
     console.log("No card found, creating card in list");
     console.log(tomorrowListId);
-
-    const newCard = await todoController.addCard(
-      {
-        name: "Sprint",
-      },
-      tomorrowListId,
-      false
+    latestDueSprintItemListCard = await createNewSprintItemListCardFromTemplate(
+      todoController,
+      tomorrowListId
     );
 
-    console.log("New Card");
-    console.log(newCard);
-
-    await todoController.addChecklistToCard(newCard.id, "Checklist");
-    await todoController.addChecklistToCard(newCard.id, "Stores");
-
-    latestDueSprintListCard = newCard;
-    console.log(latestDueSprintListCard);
+    console.log(latestDueSprintItemListCard);
   }
 
   console.log("Getting checklists from sprint card");
@@ -106,7 +93,7 @@ export async function processSprintListItems(
   /** find a checklist within sprint card */
 
   let checklists = await todoController.getChecklistsForCardId(
-    latestDueSprintListCard.id
+    latestDueSprintItemListCard.id
   );
 
   console.log("Got checklists:");
@@ -117,7 +104,7 @@ export async function processSprintListItems(
 
     console.log("Adding new checklist");
     const newChecklist = await todoController.addChecklistToCard(
-      latestDueSprintListCard.id,
+      latestDueSprintItemListCard.id,
       "Checklist"
     );
     console.log("Successfully added new checklist");
@@ -125,9 +112,56 @@ export async function processSprintListItems(
     checklists = [newChecklist];
   }
 
-  // TODO: prefer "Checklist" checklist if possible
+  let targetChecklist = checklists[0];
 
-  const targetChecklist = checklists[0];
+  let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
+    (item: CheckItem) => item.state === "complete"
+  ).length;
+  let targetChecklistTotalItems = targetChecklist.checkItems.length;
+
+  /** roll over to a new card if more than 20 items and more than half complete */
+  if (
+    targetChecklist.checkItems.length > 20 &&
+    targetChecklistItemsComplete / targetChecklistTotalItems > 0.5
+  ) {
+    /** create a new card */
+    latestDueSprintItemListCard = await createNewSprintItemListCardFromTemplate(
+      todoController,
+      tomorrowListId
+    );
+
+    let originalChecklist = targetChecklist;
+
+    /** get checklist on new card */
+    targetChecklist = (
+      await todoController.getChecklistsForCardId(
+        latestDueSprintItemListCard.id
+      )
+    )[0];
+
+    /** move "incomplete" state items from original card to a new checklist */
+    originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
+      if (checkItem.state === "incomplete") {
+        try {
+          await todoController.addCheckItemToChecklist(
+            targetChecklist.id,
+            checkItem.name
+          );
+
+          /** delete incomplete state items from original card checklist */
+          await todoController.removeCheckItemFromChecklist(
+            originalChecklist.id,
+            checkItem.id
+          );
+        } catch (e) {
+          console.log(
+            `Failed to move checklist item: ${JSON.stringify(checkItem)}`
+          );
+        }
+      }
+    });
+  }
+
   const itemsToDeleteCardFor = [];
 
   /** add items if they're not there */
@@ -155,4 +189,25 @@ export async function processSprintListItems(
       todoController.deleteCardByID(card.id);
     }
   }
+}
+
+async function createNewSprintItemListCardFromTemplate(
+  todoController: BoardController<ToDoBoardModel>,
+  tomorrowListId: string
+) {
+  const newCard = await todoController.addCard(
+    {
+      name: "Sprint",
+    },
+    tomorrowListId,
+    false
+  );
+
+  console.log("New Card");
+  console.log(newCard);
+
+  await todoController.addChecklistToCard(newCard.id, "Checklist");
+  await todoController.addChecklistToCard(newCard.id, "Stores");
+
+  return newCard;
 }
