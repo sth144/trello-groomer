@@ -12,6 +12,7 @@ import {
   wasMovedFromToListFilterFactory,
 } from "../lib/card.filters";
 import { processGroceryListItems } from "./todo/grocery-list-items";
+import { processHomelabListItems } from "./todo/homelab-tickets";
 import { processSprintListItems } from "./todo/sprint-items";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
@@ -427,6 +428,10 @@ export const ToDoGroomer = function () {
     logger.info("Processing spring list items");
 
     await processSprintListItems(todoController);
+
+    logger.info("Processing homelab ticket");
+
+    await processHomelabListItems(todoController);
 
     logger.info("Pruning repeat-labeled cards from history lists");
 
