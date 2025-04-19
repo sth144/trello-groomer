@@ -1,44 +1,49 @@
-# Base image with Python 3
-FROM python:3.12
+# ---------- Stage 1: Base (for reuse) ----------
+FROM python:3.12 AS base
 
-# Set working directory
-RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
-# Copy the project files to the working directory
 COPY . .
-
-# Copy requirement.txt to working directory
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --upgrade pip
-RUN apt-get update
-RUN apt-get install -y apache2
-RUN apt-get install -y cmake
-RUN apt-get install -y libblas-dev libopenblas-dev liblapack-dev gfortran
-RUN pip install --upgrade setuptools wheel
-RUN pip install numpy
+RUN apt-get update && apt-get install -y \
+    apache2 \
+    cmake \
+    libblas-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran \
+    curl \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --upgrade pip setuptools wheel numpy
 RUN pip install -r requirements.txt
 
-# Install Node.js and npm
-RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
-RUN apt-get install -y nodejs
+# Node.js setup
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
+  && apt-get update && apt-get install -y nodejs \
+  && npm config set strict-ssl false \
+  && npm config set registry http://registry.npmjs.org/ \
+  && npm install -g typescript
 
-# Install TypeScript
-RUN npm config set strict-ssl false
-RUN npm config set registry http://registry.npmjs.org/
-RUN npm install -g typescript
+# ---------- Stage 2: Build ----------
+FROM base AS build
+
 RUN npm install
-
-# Run TypeScript compiler
 RUN tsc -p .
+
+# ---------- Stage 3: Test ----------
+FROM build AS test
 
 RUN npm run test
 
+# ---------- Stage 4: Final Deploy Image ----------
+FROM base AS deploy
+
+COPY --from=build /usr/src/app /usr/src/app
+
 EXPOSE 4500
-
 ARG WHICH_GROOMER
+RUN chmod +x /usr/src/app/util/start.sh
 
-RUN ["chmod", "+x", "/usr/src/app/util/start.sh"]
 CMD sh -c "npm run $(echo ${WHICH_GROOMER})"
