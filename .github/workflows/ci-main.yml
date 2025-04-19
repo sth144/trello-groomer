@@ -13,12 +13,12 @@ jobs:
       - name: Trigger GitLab Pipeline
         env:
           GITLAB_API_TOKEN: ${{ secrets.GITLAB_API_TOKEN }}
-          GITLAB_API_URL: "https://gitlab.sth144.duckdns.org/api/v4/projects/1/pipeline"
+          GITLAB_API_URL: "https://gitlab.sth144.duckdns.org/api/v4/projects/1/trigger/pipeline"
         run: |
           echo $GITLAB_API_TOKEN
           curl \
             -X POST \
-            -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
+            --form "token=$GITLAB_API_TOKEN" \
             --form "ref=main" \
             --form "variables[REPO]=trello-groomer" \
             $GITLAB_API_URL
