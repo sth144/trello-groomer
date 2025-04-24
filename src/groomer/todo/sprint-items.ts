@@ -119,11 +119,16 @@ export async function processSprintListItems(
   ).length;
   let targetChecklistTotalItems = targetChecklist.checkItems.length;
 
+  console.log(
+    `${targetChecklistItemsComplete} / ${targetChecklistTotalItems} sprint items complete`
+  );
+
   /** roll over to a new card if more than 20 items and more than half complete */
   if (
     targetChecklist.checkItems.length > 20 &&
     targetChecklistItemsComplete / targetChecklistTotalItems > 0.5
   ) {
+    console.log(`Creating new sprint card and checklist`);
     /** create a new card */
     latestDueSprintItemListCard = await createNewSprintItemListCardFromTemplate(
       todoController,
@@ -142,6 +147,7 @@ export async function processSprintListItems(
     /** move "incomplete" state items from original card to a new checklist */
     originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
       if (checkItem.state === "incomplete") {
+        console.log(`Migrating checklist item ${checkItem.name}`);
         try {
           await todoController.addCheckItemToChecklist(
             targetChecklist.id,

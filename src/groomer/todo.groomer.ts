@@ -425,7 +425,7 @@ export const ToDoGroomer = function () {
 
     await processGroceryListItems(todoController);
 
-    logger.info("Processing spring list items");
+    logger.info("Processing sprint list items");
 
     await processSprintListItems(todoController);
 
