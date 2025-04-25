@@ -20,7 +20,7 @@ export async function processSprintListItems(
   const sprintListItems = sprintListItemCards.map((card) => card.desc);
 
   console.log("Sprint list items");
-  console.log(sprintListItems);
+  console.log(sprintListItemCards);
 
   // TODO: filter out DONE
   const doneListId = todoController.BoardModel.getListByName("Done").id;
@@ -56,11 +56,6 @@ export async function processSprintListItems(
         todayListId,
       ].includes(card.idList);
     })
-    // .filter((card) => {
-    //   const cardDue = new Date(card.due);
-    //   return cardDue < currentDate;
-    // })
-    // .filter((card) => card.idBoard === boards.todo.id)
     .sort((A, B) => {
       const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
       const dateB = B.due || new Date("1971-12-31");
