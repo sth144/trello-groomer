@@ -19,6 +19,9 @@ export async function processSprintListItems(
   /** extract descriptions from each */
   const sprintListItems = sprintListItemCards.map((card) => card.desc);
 
+  console.log("Sprint list items");
+  console.log(sprintListItems);
+
   // TODO: filter out DONE
   const doneListId = todoController.BoardModel.getListByName("Done").id;
   const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
