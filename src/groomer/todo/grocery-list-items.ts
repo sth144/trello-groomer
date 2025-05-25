@@ -1,10 +1,10 @@
-import { BoardController } from "@base/controller/board.controller";
-import { ToDoBoardModel } from "../todo.groomer";
-import { CheckItem } from "@base/lib/checklist.interface";
-const boards = require("../../../config/boards.json");
+import { BoardController } from '@base/controller/board.controller';
+import { ToDoBoardModel } from '../todo.groomer';
+import { CheckItem } from '@base/lib/checklist.interface';
+const boards = require('../../../config/boards.json');
 
-const GROCERY_LIST_ITEM_TAG = "[grocery list item]";
-const GROCERY_LIST_CARD_KEYWORDS = ["grocery", "groceries"];
+const GROCERY_LIST_ITEM_TAG = '[grocery list item]';
+const GROCERY_LIST_CARD_KEYWORDS = ['grocery', 'groceries'];
 
 export async function processGroceryListItems(
   todoController: BoardController<ToDoBoardModel>
@@ -20,15 +20,15 @@ export async function processGroceryListItems(
   const groceryListItems = groceryListItemCards.map((card) => card.desc);
 
   // TODO: filter out DONE
-  const doneListId = todoController.BoardModel.getListByName("Done").id;
-  const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
+  const doneListId = todoController.BoardModel.getListByName('Done').id;
+  const backlogListId = todoController.BoardModel.getListByName('Backlog').id;
   const thisMonthListId =
-    todoController.BoardModel.getListByName("This Month").id;
-  const inboxListId = todoController.BoardModel.getListByName("Inbox").id;
+    todoController.BoardModel.getListByName('This Month').id;
+  const inboxListId = todoController.BoardModel.getListByName('Inbox').id;
   const thisWeekListId =
-    todoController.BoardModel.getListByName("This Week").id;
-  const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
-  const todayListId = todoController.BoardModel.getListByName("Today").id;
+    todoController.BoardModel.getListByName('This Week').id;
+  const tomorrowListId = todoController.BoardModel.getListByName('Tomorrow').id;
+  const todayListId = todoController.BoardModel.getListByName('Today').id;
 
   /** locate latest/soonest due card with "Grocery" or "Groceries" in title */
   const existingGroceryListCards = allCards
@@ -59,8 +59,8 @@ export async function processGroceryListItems(
     // })
     // .filter((card) => card.idBoard === boards.todo.id)
     .sort((A, B) => {
-      const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
-      const dateB = B.due || new Date("1971-12-31");
+      const dateA = A.due || new Date('1971-12-31'); // If dueDate is null/undefined, set it to a future date
+      const dateB = B.due || new Date('1971-12-31');
       if (dateA > dateB) {
         return -1;
       } else if (dateB < dateA) {
@@ -68,7 +68,7 @@ export async function processGroceryListItems(
       }
       return 0;
     });
-  console.log("Grocery Lists");
+  console.log('Grocery Lists');
   console.log(existingGroceryListCards);
 
   let latestDueGroceryListCard = null;
@@ -78,7 +78,7 @@ export async function processGroceryListItems(
 
   if (!latestDueGroceryListCard) {
     /** if no card found, create from template */
-    console.log("No card found, creating card in list");
+    console.log('No card found, creating card in list');
     console.log(tomorrowListId);
     latestDueGroceryListCard = await createNewGroceryListCardFromTemplate(
       todoController,
@@ -88,7 +88,7 @@ export async function processGroceryListItems(
     console.log(latestDueGroceryListCard);
   }
 
-  console.log("Getting checklists from grocery card");
+  console.log('Getting checklists from grocery card');
 
   /** find a checklist within grocery card */
 
@@ -96,18 +96,18 @@ export async function processGroceryListItems(
     latestDueGroceryListCard.id
   );
 
-  console.log("Got checklists:");
+  console.log('Got checklists:');
   console.log(checklists);
 
   if (checklists.length === 0) {
     // if no checklist found, create one!!! and update checklists var
 
-    console.log("Adding new checklist");
+    console.log('Adding new checklist');
     const newChecklist = await todoController.addChecklistToCard(
       latestDueGroceryListCard.id,
-      "Checklist"
+      'Checklist'
     );
-    console.log("Successfully added new checklist");
+    console.log('Successfully added new checklist');
 
     checklists = [newChecklist];
   }
@@ -115,7 +115,7 @@ export async function processGroceryListItems(
   let targetChecklist = checklists[0];
 
   let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
-    (item: CheckItem) => item.state === "complete"
+    (item: CheckItem) => item.state === 'complete'
   ).length;
   let targetChecklistTotalItems = targetChecklist.checkItems.length;
 
@@ -139,7 +139,7 @@ export async function processGroceryListItems(
 
     /** move "incomplete" state items from original card to a new checklist */
     originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
-      if (checkItem.state === "incomplete") {
+      if (checkItem.state === 'incomplete') {
         try {
           await todoController.addCheckItemToChecklist(
             targetChecklist.id,
@@ -195,17 +195,17 @@ async function createNewGroceryListCardFromTemplate(
 ) {
   const newCard = await todoController.addCard(
     {
-      name: "Groceries & Errands",
+      name: 'Groceries & Errands',
     },
     tomorrowListId,
     false
   );
 
-  console.log("New Card");
+  console.log('New Card');
   console.log(newCard);
 
-  await todoController.addChecklistToCard(newCard.id, "Checklist");
-  await todoController.addChecklistToCard(newCard.id, "Stores");
+  await todoController.addChecklistToCard(newCard.id, 'Checklist');
+  await todoController.addChecklistToCard(newCard.id, 'Stores');
 
   return newCard;
 }

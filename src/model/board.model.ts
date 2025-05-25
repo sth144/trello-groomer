@@ -1,9 +1,9 @@
-import { List } from "../lib/list.interface";
-import { Checklist, CheckItem } from "../lib/checklist.interface";
-import { ICard } from "../lib/card.interface";
+import { List } from '../lib/list.interface';
+import { Checklist, CheckItem } from '../lib/checklist.interface';
+import { ICard } from '../lib/card.interface';
 
 export class BoardModel {
-  protected _id: string = "";
+  protected _id: string = '';
   public get id(): string {
     return this._id;
   }

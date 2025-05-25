@@ -1,7 +1,7 @@
-import { BoardModel } from "../model/board.model";
-import { List } from "../lib/list.interface";
-import { BoardController } from "../controller/board.controller";
-import { logger } from "../lib/logger";
+import { BoardModel } from '../model/board.model';
+import { List } from '../lib/list.interface';
+import { BoardController } from '../controller/board.controller';
+import { logger } from '../lib/logger';
 import {
   cardIsComplete,
   cardDueToday,
@@ -9,12 +9,12 @@ import {
   cardHasDueDate,
   wasMovedFromToListFilterFactory,
   Not,
-} from "../lib/card.filters";
-import { join } from "path";
-import { existsSync, readdirSync } from "fs";
-import { parseAutoDueConfig } from "../lib/parse.utils";
-const secrets = require("../../config/key.json");
-const boards = require("../../config/boards.json");
+} from '../lib/card.filters';
+import { join } from 'path';
+import { existsSync, readdirSync } from 'fs';
+import { parseAutoDueConfig } from '../lib/parse.utils';
+const secrets = require('../../config/key.json');
+const boards = require('../../config/boards.json');
 
 export class WorkBoardModel extends BoardModel {
   lists: {
@@ -48,12 +48,12 @@ export const WorkGroomer = function () {
 
   const initialize = async () => {
     start = new Date();
-    logger.info("Started " + start.toString());
+    logger.info('Started ' + start.toString());
 
-    logger.info("Building model");
+    logger.info('Building model');
     workModel = new WorkBoardModel(boards.work.id);
 
-    logger.info("Initializing controllers");
+    logger.info('Initializing controllers');
     workController = new BoardController<WorkBoardModel>(workModel, {
       key: secrets.key,
       token: secrets.token,
@@ -63,21 +63,21 @@ export const WorkGroomer = function () {
   };
 
   const groom = async () => {
-    logger.info("Grooming (Work)");
+    logger.info('Grooming (Work)');
 
     delete require.cache;
 
     /** assign due dates to cards without due dates */
     const autoDueConfigPath = join(
       process.cwd(),
-      "config/auto-due.config.json"
+      'config/auto-due.config.json'
     );
     if (existsSync(autoDueConfigPath)) {
       const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as {
         [s: string]: number;
       };
 
-      logger.info("Updating due dates based on manual list movements");
+      logger.info('Updating due dates based on manual list movements');
 
       await workController.assignDueDatesIf(
         workModel.lists.backlog.id,
@@ -115,7 +115,7 @@ export const WorkGroomer = function () {
       const addedLabels = new Promise(async (res) => {
         /** work keyword conflicts with a lot of irrelevant card titles */
         const allLabels = workController.AllLabelNames.filter(
-          (x) => x !== "Work"
+          (x) => x !== 'Work'
         );
         for (let labelName of allLabels) {
           await workController.addLabelToCardsIfTextContains(labelName, [
@@ -125,7 +125,7 @@ export const WorkGroomer = function () {
       });
       const autoLabelConfigPath = join(
         process.cwd(),
-        "config/auto-label.config.work.json"
+        'config/auto-label.config.work.json'
       );
       if (existsSync(autoLabelConfigPath)) {
         const autoLabelConfig = require(autoLabelConfigPath);
@@ -141,43 +141,43 @@ export const WorkGroomer = function () {
 
     // simple machine learning model to come up with auto-label mappings
     logger.info(
-      "Adding labels to unlabeled cards according to machine learning model"
+      'Adding labels to unlabeled cards according to machine learning model'
     );
 
-    const { spawn } = require("child_process");
-    const subprocess = spawn("python3", ["label.py", "work"], {
-      cwd: "./py/model",
+    const { spawn } = require('child_process');
+    const subprocess = spawn('python3', ['label.py', 'work'], {
+      cwd: './py/model',
     });
-    subprocess.stdout.on("data", (data: string) => {
+    subprocess.stdout.on('data', (data: string) => {
       logger.info(data.toString());
     });
-    subprocess.stderr.on("data", (err: string) => {
+    subprocess.stderr.on('data', (err: string) => {
       logger.info(err.toString());
     });
     const closed = new Promise<void>((res) => {
-      subprocess.on("close", () => {
+      subprocess.on('close', () => {
         res();
       });
     });
     await closed;
 
-    logger.info(`Cache contents: ${readdirSync("./cache")}`);
+    logger.info(`Cache contents: ${readdirSync('./cache')}`);
 
     const labelModelOutputPath = join(
       process.cwd(),
-      "cache/label.model-output.work.json"
+      'cache/label.model-output.work.json'
     );
 
     if (existsSync(labelModelOutputPath)) {
       if (
-        require.hasOwnProperty("cache") &&
+        require.hasOwnProperty('cache') &&
         require.cache.hasOwnProperty(labelModelOutputPath)
       ) {
         delete require.cache[labelModelOutputPath];
       }
       const labelsFromModel = require(labelModelOutputPath);
 
-      logger.info("Labels from ML model:");
+      logger.info('Labels from ML model:');
       logger.info(JSON.stringify(labelsFromModel));
 
       for (const labelName in labelsFromModel) {
@@ -189,7 +189,7 @@ export const WorkGroomer = function () {
       }
     }
 
-    logger.info("Updating list placements");
+    logger.info('Updating list placements');
 
     await workController.moveCardsFromToIf(
       [
@@ -227,14 +227,14 @@ export const WorkGroomer = function () {
       cardHasDueDate
     );
 
-    logger.info("Marking appropriate items done");
+    logger.info('Marking appropriate items done');
 
     await workController.markCardsInListDone(workModel.lists.done.id);
 
     logger.info(
-      "dump JSON data for card labels to train machine learning model"
+      'dump JSON data for card labels to train machine learning model'
     );
-    workController.dump("work");
+    workController.dump('work');
   };
 
   return {

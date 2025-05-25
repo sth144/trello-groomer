@@ -1,14 +1,14 @@
-import { BoardController } from "@base/controller/board.controller";
-import { ToDoBoardModel } from "../todo.groomer";
-import { CheckItem } from "@base/lib/checklist.interface";
-const boards = require("../../../config/boards.json");
+import { BoardController } from '@base/controller/board.controller';
+import { ToDoBoardModel } from '../todo.groomer';
+import { CheckItem } from '@base/lib/checklist.interface';
+const boards = require('../../../config/boards.json');
 
-const HOMELAB_TICKET_ITEM_TAG = "[homelab task]";
+const HOMELAB_TICKET_ITEM_TAG = '[homelab task]';
 const HOMELAB_TICKET_CARD_KEYWORDS = [
-  "homelab",
-  "digital",
-  "homelab task",
-  "homelab ticket",
+  'homelab',
+  'digital',
+  'homelab task',
+  'homelab ticket',
 ];
 
 export async function processHomelabListItems(
@@ -25,15 +25,15 @@ export async function processHomelabListItems(
   const homelabTickets = homelabTicketCards.map((card) => card.desc);
 
   // TODO: filter out DONE
-  const doneListId = todoController.BoardModel.getListByName("Done").id;
-  const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
+  const doneListId = todoController.BoardModel.getListByName('Done').id;
+  const backlogListId = todoController.BoardModel.getListByName('Backlog').id;
   const thisMonthListId =
-    todoController.BoardModel.getListByName("This Month").id;
-  const inboxListId = todoController.BoardModel.getListByName("Inbox").id;
+    todoController.BoardModel.getListByName('This Month').id;
+  const inboxListId = todoController.BoardModel.getListByName('Inbox').id;
   const thisWeekListId =
-    todoController.BoardModel.getListByName("This Week").id;
-  const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
-  const todayListId = todoController.BoardModel.getListByName("Today").id;
+    todoController.BoardModel.getListByName('This Week').id;
+  const tomorrowListId = todoController.BoardModel.getListByName('Tomorrow').id;
+  const todayListId = todoController.BoardModel.getListByName('Today').id;
 
   /** locate latest/soonest due card with "Homelab" in title */
   const existingHomelabListCards = allCards
@@ -64,8 +64,8 @@ export async function processHomelabListItems(
     // })
     // .filter((card) => card.idBoard === boards.todo.id)
     .sort((A, B) => {
-      const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
-      const dateB = B.due || new Date("1971-12-31");
+      const dateA = A.due || new Date('1971-12-31'); // If dueDate is null/undefined, set it to a future date
+      const dateB = B.due || new Date('1971-12-31');
       if (dateA > dateB) {
         return -1;
       } else if (dateB < dateA) {
@@ -73,7 +73,7 @@ export async function processHomelabListItems(
       }
       return 0;
     });
-  console.log("Homelab Lists");
+  console.log('Homelab Lists');
   console.log(existingHomelabListCards);
 
   let latestDueHomelabListCard = null;
@@ -83,7 +83,7 @@ export async function processHomelabListItems(
 
   if (!latestDueHomelabListCard) {
     /** if no card found, create from template */
-    console.log("No card found, creating card in list");
+    console.log('No card found, creating card in list');
     console.log(tomorrowListId);
     latestDueHomelabListCard = await createNewHomelabListCardFromTemplate(
       todoController,
@@ -93,7 +93,7 @@ export async function processHomelabListItems(
     console.log(latestDueHomelabListCard);
   }
 
-  console.log("Getting checklists from homelab card");
+  console.log('Getting checklists from homelab card');
 
   /** find a checklist within homelab card */
 
@@ -101,18 +101,18 @@ export async function processHomelabListItems(
     latestDueHomelabListCard.id
   );
 
-  console.log("Got checklists:");
+  console.log('Got checklists:');
   console.log(checklists);
 
   if (checklists.length === 0) {
     // if no checklist found, create one!!! and update checklists var
 
-    console.log("Adding new checklist");
+    console.log('Adding new checklist');
     const newChecklist = await todoController.addChecklistToCard(
       latestDueHomelabListCard.id,
-      "Checklist"
+      'Checklist'
     );
-    console.log("Successfully added new checklist");
+    console.log('Successfully added new checklist');
 
     checklists = [newChecklist];
   }
@@ -120,7 +120,7 @@ export async function processHomelabListItems(
   let targetChecklist = checklists[0];
 
   let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
-    (item: CheckItem) => item.state === "complete"
+    (item: CheckItem) => item.state === 'complete'
   ).length;
   let targetChecklistTotalItems = targetChecklist.checkItems.length;
 
@@ -144,7 +144,7 @@ export async function processHomelabListItems(
 
     /** move "incomplete" state items from original card to a new checklist */
     originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
-      if (checkItem.state === "incomplete") {
+      if (checkItem.state === 'incomplete') {
         try {
           await todoController.addCheckItemToChecklist(
             targetChecklist.id,
@@ -200,17 +200,17 @@ async function createNewHomelabListCardFromTemplate(
 ) {
   const newCard = await todoController.addCard(
     {
-      name: "Homelab",
+      name: 'Homelab',
     },
     tomorrowListId,
     false
   );
 
-  console.log("New Card");
+  console.log('New Card');
   console.log(newCard);
 
-  await todoController.addChecklistToCard(newCard.id, "Checklist");
-  await todoController.addChecklistToCard(newCard.id, "Stores");
+  await todoController.addChecklistToCard(newCard.id, 'Checklist');
+  await todoController.addChecklistToCard(newCard.id, 'Stores');
 
   return newCard;
 }

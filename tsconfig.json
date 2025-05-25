@@ -1,37 +1,28 @@
 {
-    "compilerOptions": {
-        "target": "es5",
-        "strict": true,
-        "strictPropertyInitialization": false,
-        "strictNullChecks": false,
-        "noImplicitThis": false,
-        "resolveJsonModule": true,
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "allowSyntheticDefaultImports": true,
-        "sourceMap": true,
-        "types": ["node", "mocha"],
-        "typeRoots": [ "node_modules/@types" ],
-        "rootDirs": ["src"],
-        "baseUrl": "src",
-        "outDir": "dist",
-        "paths": { 
-            "@base/*": ["./*"]
-         },
-        "lib": [
-            "es6",
-            "es2017",
-            "es2017.object",
-            "dom"
-        ],
-        "allowJs": true
+  "compilerOptions": {
+    "target": "es5",
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+    "resolveJsonModule": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "types": ["node", "mocha"],
+    "typeRoots": ["node_modules/@types"],
+    "rootDirs": ["src"],
+    "baseUrl": "src",
+    "outDir": "dist",
+    "paths": {
+      "@base/*": ["./*"]
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules"
-    ]
+    "lib": ["es6", "es2017", "es2017.object", "dom"],
+    "allowJs": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

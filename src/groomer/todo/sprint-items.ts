@@ -1,10 +1,10 @@
-import { BoardController } from "@base/controller/board.controller";
-import { ToDoBoardModel } from "../todo.groomer";
-import { CheckItem } from "@base/lib/checklist.interface";
-const boards = require("../../../config/boards.json");
+import { BoardController } from '@base/controller/board.controller';
+import { ToDoBoardModel } from '../todo.groomer';
+import { CheckItem } from '@base/lib/checklist.interface';
+const boards = require('../../../config/boards.json');
 
-const SPRINT_LIST_ITEM_TAG = "[sprint item]";
-const SPRINT_LIST_CARD_KEYWORDS = ["sprint", "sprints"];
+const SPRINT_LIST_ITEM_TAG = '[sprint item]';
+const SPRINT_LIST_CARD_KEYWORDS = ['sprint', 'sprints'];
 
 export async function processSprintListItems(
   todoController: BoardController<ToDoBoardModel>
@@ -19,19 +19,19 @@ export async function processSprintListItems(
   /** extract descriptions from each */
   const sprintListItems = sprintListItemCards.map((card) => card.desc);
 
-  console.log("Sprint list items");
+  console.log('Sprint list items');
   console.log(sprintListItemCards);
 
   // TODO: filter out DONE
-  const doneListId = todoController.BoardModel.getListByName("Done").id;
-  const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
+  const doneListId = todoController.BoardModel.getListByName('Done').id;
+  const backlogListId = todoController.BoardModel.getListByName('Backlog').id;
   const thisMonthListId =
-    todoController.BoardModel.getListByName("This Month").id;
-  const inboxListId = todoController.BoardModel.getListByName("Inbox").id;
+    todoController.BoardModel.getListByName('This Month').id;
+  const inboxListId = todoController.BoardModel.getListByName('Inbox').id;
   const thisWeekListId =
-    todoController.BoardModel.getListByName("This Week").id;
-  const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
-  const todayListId = todoController.BoardModel.getListByName("Today").id;
+    todoController.BoardModel.getListByName('This Week').id;
+  const tomorrowListId = todoController.BoardModel.getListByName('Tomorrow').id;
+  const todayListId = todoController.BoardModel.getListByName('Today').id;
 
   /** locate latest/soonest due card with "Sprint"  in title */
   const existingSprintItemListCards = allCards
@@ -57,8 +57,8 @@ export async function processSprintListItems(
       ].includes(card.idList);
     })
     .sort((A, B) => {
-      const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
-      const dateB = B.due || new Date("1971-12-31");
+      const dateA = A.due || new Date('1971-12-31'); // If dueDate is null/undefined, set it to a future date
+      const dateB = B.due || new Date('1971-12-31');
       if (dateA > dateB) {
         return -1;
       } else if (dateB < dateA) {
@@ -66,7 +66,7 @@ export async function processSprintListItems(
       }
       return 0;
     });
-  console.log("Sprint Lists");
+  console.log('Sprint Lists');
   console.log(existingSprintItemListCards);
 
   let latestDueSprintItemListCard = null;
@@ -76,7 +76,7 @@ export async function processSprintListItems(
 
   if (!latestDueSprintItemListCard) {
     /** if no card found, create from template */
-    console.log("No card found, creating card in list");
+    console.log('No card found, creating card in list');
     console.log(tomorrowListId);
     latestDueSprintItemListCard = await createNewSprintItemListCardFromTemplate(
       todoController,
@@ -86,7 +86,7 @@ export async function processSprintListItems(
     console.log(latestDueSprintItemListCard);
   }
 
-  console.log("Getting checklists from sprint card");
+  console.log('Getting checklists from sprint card');
 
   /** find a checklist within sprint card */
 
@@ -94,18 +94,18 @@ export async function processSprintListItems(
     latestDueSprintItemListCard.id
   );
 
-  console.log("Got checklists:");
+  console.log('Got checklists:');
   console.log(checklists);
 
   if (checklists.length === 0) {
     // if no checklist found, create one!!! and update checklists var
 
-    console.log("Adding new checklist");
+    console.log('Adding new checklist');
     const newChecklist = await todoController.addChecklistToCard(
       latestDueSprintItemListCard.id,
-      "Checklist"
+      'Checklist'
     );
-    console.log("Successfully added new checklist");
+    console.log('Successfully added new checklist');
 
     checklists = [newChecklist];
   }
@@ -113,7 +113,7 @@ export async function processSprintListItems(
   let targetChecklist = checklists[0];
 
   let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
-    (item: CheckItem) => item.state === "complete"
+    (item: CheckItem) => item.state === 'complete'
   ).length;
   let targetChecklistTotalItems = targetChecklist.checkItems.length;
 
@@ -144,7 +144,7 @@ export async function processSprintListItems(
 
     /** move "incomplete" state items from original card to a new checklist */
     originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
-      if (checkItem.state === "incomplete") {
+      if (checkItem.state === 'incomplete') {
         console.log(`Migrating checklist item ${checkItem.name}`);
         try {
           await todoController.addCheckItemToChecklist(
@@ -201,16 +201,16 @@ async function createNewSprintItemListCardFromTemplate(
 ) {
   const newCard = await todoController.addCard(
     {
-      name: "Sprint",
+      name: 'Sprint',
     },
     tomorrowListId,
     false
   );
 
-  console.log("New Card");
+  console.log('New Card');
   console.log(newCard);
 
-  await todoController.addChecklistToCard(newCard.id, "Checklist");
+  await todoController.addChecklistToCard(newCard.id, 'Checklist');
 
   return newCard;
 }

@@ -1,5 +1,5 @@
-import { ICard, IAction } from "./card.interface";
-import { getNextWeekDay, Weekday, diffBtwnDatesInDays } from "./date.utils";
+import { ICard, IAction } from './card.interface';
+import { getNextWeekDay, Weekday, diffBtwnDatesInDays } from './date.utils';
 
 export const cardIsComplete = (card: ICard) => {
   if (card.dueComplete) {
@@ -74,19 +74,19 @@ export function wasMovedFromToListFilterFactory(
   return (card: ICard) => {
     const isMoveFromToAction = (action: IAction): boolean => {
       return (
-        action.data.hasOwnProperty("listBefore") &&
+        action.data.hasOwnProperty('listBefore') &&
         fromListIds.some(
-          (id) => id === (<{ id: string }>action.data["listBefore"]).id
+          (id) => id === (<{ id: string }>action.data['listBefore']).id
         ) &&
-        action.data.hasOwnProperty("listAfter") &&
-        (<{ id: string }>action.data["listAfter"]).id === toListId
+        action.data.hasOwnProperty('listAfter') &&
+        (<{ id: string }>action.data['listAfter']).id === toListId
       );
     };
 
     const isDueDateAction = (action: IAction): boolean => {
       return (
-        action.data.hasOwnProperty("old") &&
-        action.data["old"].hasOwnProperty("due")
+        action.data.hasOwnProperty('old') &&
+        action.data['old'].hasOwnProperty('due')
       );
     };
 
@@ -94,7 +94,7 @@ export function wasMovedFromToListFilterFactory(
     const updateCardActions = card.actions
       .filter((x: IAction) => {
         return (
-          x.type === "updateCard" &&
+          x.type === 'updateCard' &&
           /**
            * get all list movement actions where card was moved from one of the lists in
            *  fromListIds to toListId

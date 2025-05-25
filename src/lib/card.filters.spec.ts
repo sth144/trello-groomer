@@ -1,10 +1,10 @@
-import { ICard } from "./card.interface";
-import { cardDueToday } from "./card.filters";
-import { expect } from "chai";
+import { ICard } from './card.interface';
+import { cardDueToday } from './card.filters';
+import { expect } from 'chai';
 
-describe("Card filters", () => {
-  describe("cardDueToday", () => {
-    it("should return true for card due before midnight tonight", () => {
+describe('Card filters', () => {
+  describe('cardDueToday', () => {
+    it('should return true for card due before midnight tonight', () => {
       const _11pmTonight = new Date();
       _11pmTonight.setHours(23, 0, 0, 0);
 
@@ -27,7 +27,7 @@ describe("Card filters", () => {
 
       expect(cardDueToday(cardToday)).to.equal(true);
     });
-    it("should return false for card due tomorrow", () => {
+    it('should return false for card due tomorrow', () => {
       const _11amTomorrow = new Date();
       _11amTomorrow.setDate(_11amTomorrow.getDate() + 1);
       _11amTomorrow.setHours(11, 0, 0, 0);

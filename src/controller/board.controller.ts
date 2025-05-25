@@ -1,19 +1,19 @@
 // TODO: documentation card in Trello board
 
-import { TrelloHttpClient } from "../lib/http.client";
-import { BoardModel } from "../model/board.model";
-import { ICard } from "../lib/card.interface";
-import { List } from "../lib/list.interface";
-import { Checklist, CheckItem } from "../lib/checklist.interface";
-import { ReplaySubject } from "rxjs";
-import { first } from "rxjs/operators";
+import { TrelloHttpClient } from '../lib/http.client';
+import { BoardModel } from '../model/board.model';
+import { ICard } from '../lib/card.interface';
+import { List } from '../lib/list.interface';
+import { Checklist, CheckItem } from '../lib/checklist.interface';
+import { ReplaySubject } from 'rxjs';
+import { first } from 'rxjs/operators';
 import {
   getNDaysFromNow,
   parseDueDate,
   getMidPointBetweenDates,
-} from "../lib/date.utils";
-import { logger } from "../lib/logger";
-import { writeFileSync, existsSync } from "fs";
+} from '../lib/date.utils';
+import { logger } from '../lib/logger';
+import { writeFileSync, existsSync } from 'fs';
 import {
   removePropsByDotPath,
   detectRemovals,
@@ -21,8 +21,8 @@ import {
   syncObjectsWithPreference,
   updateLiteralsByDotPath,
   detectLiteralChanges,
-} from "../lib/object.utils";
-import { join } from "path";
+} from '../lib/object.utils';
+import { join } from 'path';
 
 /********************************************************************************************
  * BoardController exposes public methods which allow updating of Trello board. Enables     *
@@ -66,13 +66,13 @@ export class BoardController<T extends BoardModel> {
    */
   public async addCard(
     opts: any,
-    toListId: string = this.boardModel.getLists().hasOwnProperty("inbox")
+    toListId: string = this.boardModel.getLists().hasOwnProperty('inbox')
       ? /* don't rely on / assume existence of inbox list... */
         (this.boardModel.getLists() as { inbox: { id: string } }).inbox.id
       : undefined,
     idListAsQueryParam = true
   ): Promise<ICard> {
-    let url = "/cards";
+    let url = '/cards';
     if (idListAsQueryParam) {
       url += `?idList=${toListId}`;
     }
@@ -125,8 +125,8 @@ export class BoardController<T extends BoardModel> {
           /** if doesn't exist as card, and isn't complete */
           if (
             !alreadyExists &&
-            checklistItem.state !== "complete" &&
-            checklistItem.name.indexOf("https://") === -1 &&
+            checklistItem.state !== 'complete' &&
+            checklistItem.name.indexOf('https://') === -1 &&
             /** get reference to parent card, abort if undefined */
             (parentCard = this.boardModel.getCardById(
               checklists[checklistId].idCard
@@ -149,7 +149,7 @@ export class BoardController<T extends BoardModel> {
               `/checklists/${checklistId}/checkItems/`,
               {
                 /** prevents multiple URLs from being inserted */
-                name: `${checklistItem.name.split("https://")[0]} ${
+                name: `${checklistItem.name.split('https://')[0]} ${
                   childCard.shortUrl
                 }`,
               }
@@ -184,22 +184,22 @@ export class BoardController<T extends BoardModel> {
         /** for each attachment */
         for (const attachment of card.attachments) {
           /** if attachment has substring "parent" (meaning it is a subtask) */
-          if (attachment.name.indexOf("parent") !== -1) {
+          if (attachment.name.indexOf('parent') !== -1) {
             /** split by delimiter "|" (see @1 above) and parse */
-            let info = attachment.name.split("|");
+            let info = attachment.name.split('|');
             const parsed: any = {};
             for (const item of info) {
-              const split = item.split(":");
+              const split = item.split(':');
               const prop = split[0];
               const val = split[1];
               Object.assign(parsed, { [prop]: val });
             }
             /** find checklist corresponding to card and mark item complete */
             if (
-              parsed.hasOwnProperty("checklistId") &&
-              parsed.hasOwnProperty("checkItemId") &&
+              parsed.hasOwnProperty('checklistId') &&
+              parsed.hasOwnProperty('checkItemId') &&
               this.boardModel.getAllChecklistItems().filter((x) => {
-                x.id === parsed["checkItemId"] && x.state !== "complete";
+                x.id === parsed['checkItemId'] && x.state !== 'complete';
               }).length > 0
             ) {
               this.httpClient
@@ -245,7 +245,7 @@ export class BoardController<T extends BoardModel> {
                 `/checklists/${checklistId}/checkItems/`,
                 {
                   /** split()[] prevents multiple URLs from being inserted */
-                  name: `${checklistItem.name.split("https://")[0]} ${
+                  name: `${checklistItem.name.split('https://')[0]} ${
                     prepCard.shortUrl
                   }`,
                 }
@@ -278,22 +278,22 @@ export class BoardController<T extends BoardModel> {
           card.attachments.map((attachment: any) => {
             if (
               attachment.name !== undefined &&
-              attachment.name.indexOf("dependent") !== -1
+              attachment.name.indexOf('dependent') !== -1
             ) {
               const parsed: any = {};
-              const info = attachment.name.split("|");
+              const info = attachment.name.split('|');
               for (const item of info) {
-                let split = item.split(":");
+                let split = item.split(':');
                 if (split.length === 2) {
                   Object.assign(parsed, { [split[0]]: split[1] });
                 }
               }
               /** find checklist corresponding dependent to card and mark item complete */
               if (
-                parsed.hasOwnProperty("checklistId") &&
-                parsed.hasOwnProperty("checkItemId") &&
+                parsed.hasOwnProperty('checklistId') &&
+                parsed.hasOwnProperty('checkItemId') &&
                 this.boardModel.getAllChecklistItems().filter((x) => {
-                  x.id === parsed["checkItemId"] && x.state !== "complete";
+                  x.id === parsed['checkItemId'] && x.state !== 'complete';
                 }).length > 0
               ) {
                 this.httpClient
@@ -329,9 +329,9 @@ export class BoardController<T extends BoardModel> {
         targetChecklist.checkItems.forEach(async (checklistItem: CheckItem) => {
           /** if doesn't exist as card, and isn't complete */
           if (
-            checklistItem.state !== "complete" &&
+            checklistItem.state !== 'complete' &&
             !allCards.some((x) => x.name.indexOf(checklistItem.name) !== -1) &&
-            checklistItem.name.indexOf("https://") === -1
+            checklistItem.name.indexOf('https://') === -1
           ) {
             const parentCard = this.boardModel.getCardById(
               checklists[checklistId].idCard
@@ -354,7 +354,7 @@ export class BoardController<T extends BoardModel> {
               `/checklists/${checklistId}/checkItems/`,
               {
                 /** prevents multiple URLs from being inserted */
-                name: `${checklistItem.name.split("https://")[0]} ${
+                name: `${checklistItem.name.split('https://')[0]} ${
                   childCard.shortUrl
                 }`,
               }
@@ -382,22 +382,22 @@ export class BoardController<T extends BoardModel> {
           card.attachments.map((attachment: any) => {
             if (
               attachment.name !== undefined &&
-              attachment.name.indexOf("dependent") !== -1
+              attachment.name.indexOf('dependent') !== -1
             ) {
               const parsed: any = {};
-              const info = attachment.name.split("|");
+              const info = attachment.name.split('|');
               for (const item of info) {
-                let split = item.split(":");
+                let split = item.split(':');
                 if (split.length === 2) {
                   Object.assign(parsed, { [split[0]]: split[1] });
                 }
               }
               /** find checklist corresponding dependent to card and mark item complete */
               if (
-                parsed.hasOwnProperty("checklistId") &&
-                parsed.hasOwnProperty("checkItemId") &&
+                parsed.hasOwnProperty('checklistId') &&
+                parsed.hasOwnProperty('checkItemId') &&
                 this.boardModel.getAllChecklistItems().filter((x) => {
-                  x.id === parsed["checkItemId"] && x.state !== "complete";
+                  x.id === parsed['checkItemId'] && x.state !== 'complete';
                 }).length > 0
               ) {
                 this.httpClient
@@ -420,9 +420,9 @@ export class BoardController<T extends BoardModel> {
      * if checklist item completed, and has card, complete card
      */
     for (const checklistItem of this.boardModel.getAllChecklistItems()) {
-      if (checklistItem.state === "complete") {
+      if (checklistItem.state === 'complete') {
         /** check that name includes link to card */
-        const splitCheckItemName = checklistItem.name.split(" https://");
+        const splitCheckItemName = checklistItem.name.split(' https://');
         if (splitCheckItemName.length > 1) {
           for (const card of this.boardModel.getAllCards()) {
             if (
@@ -516,10 +516,10 @@ export class BoardController<T extends BoardModel> {
           const cardBelow = targetListCards[i + 1];
 
           if (
-            cardAbove.hasOwnProperty("due") &&
+            cardAbove.hasOwnProperty('due') &&
             cardAbove.due !== null &&
             cardAbove.due !== undefined &&
-            cardBelow.hasOwnProperty("due") &&
+            cardBelow.hasOwnProperty('due') &&
             cardBelow.due !== null &&
             cardBelow.due !== undefined
           ) {
@@ -661,7 +661,7 @@ export class BoardController<T extends BoardModel> {
           const wordsInCommon: string[] = [];
           const [wordsA, wordsB] = [cardA.name, cardB.name].map((y) =>
             y
-              .split(" ")
+              .split(' ')
               .map((x) => x.toLowerCase())
               .filter((x) => x.length > 3)
               .filter((x) => ignorePatterns.indexOf(x) === -1)
@@ -721,7 +721,7 @@ export class BoardController<T extends BoardModel> {
                 numAddedThisCard < numAttachmentsCanAdd &&
                 totalLinksAdded < maxLinksAdded &&
                 !cardA.actions.some((a: any) => {
-                  if (a.data.hasOwnProperty("attachment")) {
+                  if (a.data.hasOwnProperty('attachment')) {
                     /** do not re-link a card which has already been linked and removed */
                     return (
                       cardToLink.shortUrl.indexOf(a.data.attachment.name) !== -1
@@ -758,7 +758,7 @@ export class BoardController<T extends BoardModel> {
       .getCards()
       .filter(
         (card) =>
-          card.hasOwnProperty("due") &&
+          card.hasOwnProperty('due') &&
           card.due !== null &&
           card.due !== undefined
       )
@@ -800,7 +800,7 @@ export class BoardController<T extends BoardModel> {
     if (checklist) {
       return checklist;
     } else {
-      throw new Error("Failed to add checklist to the card.");
+      throw new Error('Failed to add checklist to the card.');
     }
   }
 
@@ -811,11 +811,11 @@ export class BoardController<T extends BoardModel> {
     return await this.httpClient
       .asyncPost(`/checklists/${checklistId}/checkItems`, {
         name: itemName,
-        pos: "bottom", // Position the new item at the bottom of the checklist
+        pos: 'bottom', // Position the new item at the bottom of the checklist
         checked: false, // Set checked to false for an unchecked item
       })
       .catch((error) => {
-        console.error("Error adding item to the checklist:", error);
+        console.error('Error adding item to the checklist:', error);
       });
   }
 
@@ -832,13 +832,13 @@ export class BoardController<T extends BoardModel> {
 
   public async syncConfigJsonWithCard(jsonFileName: string, cardName: string) {
     const targetConfigSyncCard = this.boardModel.getCardByName(cardName);
-    const configPath = join(process.cwd(), "config", jsonFileName);
+    const configPath = join(process.cwd(), 'config', jsonFileName);
     const loadedConfig = require(configPath);
 
     /** validate */
     if (
       [targetConfigSyncCard, loadedConfig].some((x) => {
-        return x === undefined || typeof x !== "object";
+        return x === undefined || typeof x !== 'object';
       })
     ) {
       return;
@@ -848,7 +848,7 @@ export class BoardController<T extends BoardModel> {
 
     const prevConfigUpdatePath = join(
       process.cwd(),
-      "cache/",
+      'cache/',
       `old.${jsonFileName}`
     );
     let prevConfigUpdate = {};
@@ -903,7 +903,7 @@ export class BoardController<T extends BoardModel> {
     this.allListsOnBoard = await this.httpClient
       .asyncGet(`/board/${this.boardModel.id}/lists`)
       .catch((err) => console.error(err));
-    if (typeof this.allListsOnBoard === "string") {
+    if (typeof this.allListsOnBoard === 'string') {
       this.allListsOnBoard = JSON.parse(this.allListsOnBoard);
     }
 
@@ -943,7 +943,7 @@ export class BoardController<T extends BoardModel> {
 
     for (const responseChecklist of checklistsOnBoard) {
       if (
-        responseChecklist.hasOwnProperty("id") &&
+        responseChecklist.hasOwnProperty('id') &&
         responseChecklist.id !== undefined
       ) {
         /** create a new checklist model in memory */
@@ -985,7 +985,7 @@ export class BoardController<T extends BoardModel> {
     const allLabels = {};
     let labelResponse: Array<Record<string, string>> =
       await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`);
-    if (typeof labelResponse === "string") {
+    if (typeof labelResponse === 'string') {
       labelResponse = JSON.parse(labelResponse);
     }
 
@@ -993,10 +993,10 @@ export class BoardController<T extends BoardModel> {
 
     labelResponse = <any>labelResponse.map((label: Record<string, string>) => {
       if (
-        label.hasOwnProperty("id") &&
-        label.hasOwnProperty("name") &&
+        label.hasOwnProperty('id') &&
+        label.hasOwnProperty('name') &&
         label.name.length > 0 &&
-        label.hasOwnProperty("color") &&
+        label.hasOwnProperty('color') &&
         label.color !== null
       ) {
         Object.assign(allLabels, { [label.name]: label.id });
@@ -1094,7 +1094,7 @@ export class BoardController<T extends BoardModel> {
   public dump(whichGroomer: string): void {
     // TODO: merge all this label stuff into a single json file
 
-    logger.info("Caching labels");
+    logger.info('Caching labels');
 
     writeFileSync(
       join(process.cwd(), `cache/labels.${whichGroomer}.json`),
@@ -1108,13 +1108,13 @@ export class BoardController<T extends BoardModel> {
       }
     });
 
-    logger.info("Caching label data");
+    logger.info('Caching label data');
     writeFileSync(
       join(process.cwd(), `cache/label-data.${whichGroomer}.json`),
       JSON.stringify(labelData)
     );
 
-    logger.info("Caching unlabeled cards");
+    logger.info('Caching unlabeled cards');
     const unlabeledCards: any[] = this.boardModel
       .getAllCards()
       .filter((x) => x.idLabels.length === 0)
@@ -1124,7 +1124,7 @@ export class BoardController<T extends BoardModel> {
       JSON.stringify(unlabeledCards)
     );
 
-    logger.info("Caching model");
+    logger.info('Caching model');
     writeFileSync(
       join(process.cwd(), `cache/model.${whichGroomer}.json`),
       JSON.stringify(this.boardModel, null, 4)
