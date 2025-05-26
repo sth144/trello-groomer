@@ -14,6 +14,7 @@ import {
 import { processGroceryListItems } from './todo/grocery-list-items';
 import { processHomelabListItems } from './todo/homelab-tickets';
 import { processSprintListItems } from './todo/sprint-items';
+import { processResearchTasks } from './todo/research-tasks'; // Add this import
 import { DateRegexes, getMonthNumFromAbbrev } from '../lib/date.utils';
 import { parseAutoDueConfig } from '../lib/parse.utils';
 import { join } from 'path';
@@ -432,6 +433,10 @@ export const ToDoGroomer = function () {
     logger.info('Processing homelab ticket');
 
     await processHomelabListItems(todoController);
+
+    logger.info('Processing research tasks');
+
+    await processResearchTasks(todoController);
 
     logger.info('Pruning repeat-labeled cards from history lists');
 

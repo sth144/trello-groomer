@@ -21,7 +21,7 @@ export function detectRemovals(
               return item.toString() === arrayFromOld[i].toString();
             })
           ) {
-            dotPaths.push([...pathSoFar, k, `${arrayFromOld[i]}`]);
+            dotPaths.push([...pathSoFar, k, `${i}`]);
           }
         }
       } else if (typeof oldObject[k] === 'object') {
@@ -159,7 +159,7 @@ export function syncObjectsWithPreference(
         [k]: preferred[k],
       });
     } else if (Array.isArray(preferred[k])) {
-    /** if property is array */
+      /** if property is array */
       /** include every unique item from both config sources */
       let resultPropArr: ConfigPropType[] = [];
       if (secondary.hasOwnProperty(k)) {
