@@ -1,5 +1,6 @@
 import { processResearchTasks } from './research-tasks';
 import { CheckItem, Checklist } from '@base/lib/checklist.interface';
+import { expect } from 'chai';
 
 describe('processResearchTasks (manual mocks)', () => {
   let mockTodoController: any;
