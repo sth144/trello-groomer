@@ -17,10 +17,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/sinon": "^17.0.4",
     "cron": "^1.8.2",
     "express": "^4.17.1",
     "request": "^2.88.0",
     "rxjs": "^6.5.3",
+    "sinon": "^20.0.0",
     "winston": "^3.2.1"
   },
   "devDependencies": {
