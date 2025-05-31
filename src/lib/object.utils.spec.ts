@@ -12,6 +12,9 @@ import { assert } from 'chai';
 describe('Object utils', () => {
   let before: any, after: any;
   describe('detectRemovals', () => {
+    const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+    let now: number;
+
     beforeEach(() => {
       before = cloneObj(exampleObj1);
       after = cloneObj(before);
@@ -26,82 +29,115 @@ describe('Object utils', () => {
       after['level1']['level2']['level3']['level3Arr'] = after['level1'][
         'level2'
       ]['level3']['level3Arr'].slice(0, 2);
+
+      now = Date.now(); // For timestamp comparisons
     });
+
+    function arraysEqual(a: string[], b: string[]): boolean {
+      return (
+        Array.isArray(a) &&
+        Array.isArray(b) &&
+        a.length === b.length &&
+        a.every((val, index) => val === b[index])
+      );
+    }
+
+    function isRoughlyTenDaysAgo(date: Date): boolean {
+      const timeDiff = now - new Date(date).getTime();
+      return timeDiff > TEN_DAYS_MS - 1000 && timeDiff < TEN_DAYS_MS + 1000;
+    }
+
     it('should detect property removed from object root', () => {
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return r[0] === 'rootNum';
-        })
-      );
+      const removal = result.find((r) => arraysEqual(r.path, ['rootNum']));
+      assert.isOk(removal);
+      assert.strictEqual(removal.prevValue, before['rootNum']);
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect property removed from object nested 1 level in', () => {
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return r[0] === 'level1' && r[1] === 'level1Num';
-        })
+      const removal = result.find((r) =>
+        arraysEqual(r.path, ['level1', 'level1Num'])
       );
+      assert.isOk(removal);
+      assert.strictEqual(removal.prevValue, before.level1.level1Num);
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect property removed from object nested 2 levels in', () => {
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return r[0] === 'level1' && r[1] === 'level2' && r[2] === 'level2Str';
-        })
+      const removal = result.find((r) =>
+        arraysEqual(r.path, ['level1', 'level2', 'level2Str'])
       );
+      assert.isOk(removal);
+      assert.strictEqual(removal.prevValue, before.level1.level2.level2Str);
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect property removed from object nested 3 levels in', () => {
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return (
-            r[0] === 'level1' &&
-            r[1] === 'level2' &&
-            r[2] === 'level3' &&
-            r[3] === 'level3Num'
-          );
-        })
+      const removal = result.find((r) =>
+        arraysEqual(r.path, ['level1', 'level2', 'level3', 'level3Num'])
       );
+      assert.isOk(removal);
+      assert.strictEqual(
+        removal.prevValue,
+        before.level1.level2.level3.level3Num
+      );
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect property removed from object nested 5 levels in', () => {
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return (
-            r[0] === 'level1' &&
-            r[1] === 'level2' &&
-            r[2] === 'level3' &&
-            r[3] === 'level4' &&
-            r[4] === 'level5' &&
-            r[5] === 'level5Str'
-          );
-        })
+      const removal = result.find((r) =>
+        arraysEqual(r.path, [
+          'level1',
+          'level2',
+          'level3',
+          'level4',
+          'level5',
+          'level5Str',
+        ])
       );
+      assert.isOk(removal);
+      assert.strictEqual(
+        removal.prevValue,
+        before.level1.level2.level3.level4.level5.level5Str
+      );
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect element removed from array property at object root', () => {
+      const removedValue = before['rootArr'][0];
       const result = detectRemovals(after, before);
-      console.log(result);
-      assert.isTrue(
-        result.some((r) => {
-          return r[0] === 'rootArr' && r[1] === before['rootArr'][0].toString();
-        })
+
+      const removal = result.find(
+        (r) =>
+          arraysEqual(r.path, ['rootArr', '0']) && r.prevValue === removedValue
       );
+
+      assert.isOk(removal);
+      assert.strictEqual(removal.prevValue, removedValue);
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
+
     it('should detect element removed from array property nested 3 levels in', () => {
+      const removedValue = before.level1.level2.level3.level3Arr[2];
       const result = detectRemovals(after, before);
-      assert.isTrue(
-        result.some((r) => {
-          return (
-            r[0] === 'level1' &&
-            r[1] === 'level2' &&
-            r[2] === 'level3' &&
-            r[3] === 'level3Arr' &&
-            r[4] ===
-              before['level1']['level2']['level3']['level3Arr'][2].toString()
-          );
-        })
+      const removal = result.find(
+        (r) =>
+          arraysEqual(r.path, [
+            'level1',
+            'level2',
+            'level3',
+            'level3Arr',
+            '2',
+          ]) && r.prevValue === removedValue
       );
+      assert.isOk(removal);
+      assert.strictEqual(removal.prevValue, removedValue);
+      assert.isTrue(isRoughlyTenDaysAgo(removal.timestamp));
     });
   });
 

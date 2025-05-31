@@ -1,31 +1,43 @@
-import { isArray } from 'util';
-
 export type ConfigObj = { [s: string]: ConfigPropType };
 export type ConfigPropType = number | boolean | string | object;
+import { getNDaysFromNow } from './date.utils';
+
+export type RemovalInfo = {
+  path: string[];
+  timestamp: Date;
+  prevValue: any;
+};
 
 export function detectRemovals(
   newObject: ConfigObj,
   oldObject: ConfigObj,
   pathSoFar: string[] = []
-): string[][] {
-  let dotPaths: string[][] = [];
+): RemovalInfo[] {
+  let removals: RemovalInfo[] = [];
+
   Object.keys(oldObject).forEach((k) => {
     if (newObject.hasOwnProperty(k)) {
-      if (isArray(oldObject[k])) {
-        const arrayFromOld = <Array<ConfigPropType>>oldObject[k];
-        const arrayFromNew = <Array<ConfigPropType>>newObject[k];
+      if (Array.isArray(oldObject[k])) {
+        const arrayFromOldObject = <Array<ConfigPropType>>oldObject[k];
+        const arrayFromNewObject = <Array<ConfigPropType>>newObject[k];
 
-        for (let i = 0; i < arrayFromOld.length; i++) {
+        for (let i = 0; i < arrayFromOldObject.length; i++) {
           if (
-            !arrayFromNew.some((item) => {
-              return item.toString() === arrayFromOld[i].toString();
+            !arrayFromNewObject.some((item) => {
+              return item.toString() === arrayFromOldObject[i].toString();
             })
           ) {
-            dotPaths.push([...pathSoFar, k, `${i}`]);
+            /** no matching item in array from new object */
+            removals.push({
+              path: [...pathSoFar, k, `${i}`],
+              timestamp: getNDaysFromNow(-10), // 10 days in the past
+              prevValue: arrayFromOldObject[i],
+            });
           }
         }
       } else if (typeof oldObject[k] === 'object') {
-        dotPaths = dotPaths.concat(
+        /** call recursively on object properties */
+        removals = removals.concat(
           detectRemovals(newObject[k] as ConfigObj, oldObject[k] as ConfigObj, [
             ...pathSoFar,
             k,
@@ -33,11 +45,16 @@ export function detectRemovals(
         );
       }
     } else {
-      dotPaths.push([...pathSoFar, k]);
+      /** literals */
+      removals.push({
+        path: [...pathSoFar, k],
+        timestamp: getNDaysFromNow(-10), // 10 days in the past
+        prevValue: oldObject[k],
+      });
     }
   });
 
-  return dotPaths;
+  return removals;
 }
 
 export type LiteralUpdate = { dotPath: string[]; value: ConfigPropType };
@@ -59,7 +76,7 @@ export function detectLiteralChanges(
             break;
           }
           case 'object': {
-            if (!isArray(newObject[k])) {
+            if (!Array.isArray(newObject[k])) {
               updates = updates.concat(
                 detectLiteralChanges(
                   newObject[k] as ConfigObj,
@@ -87,7 +104,7 @@ export function updateLiteralsByDotPath(
     if (target.hasOwnProperty(update.dotPath[0])) {
       if (
         typeof target[update.dotPath[0]] === 'object' &&
-        !isArray(target[update.dotPath[0]])
+        !Array.isArray(target[update.dotPath[0]])
       ) {
         updateLiteralsByDotPath(
           target[update.dotPath[0]] as ConfigObj,
@@ -110,7 +127,7 @@ export function removePropsByDotPath(
   const arraysAtRootLevel: { [key: string]: any[] } = {};
   dotPaths.forEach((path) => {
     if (target.hasOwnProperty(path[0])) {
-      if (isArray(target[path[0]])) {
+      if (Array.isArray(target[path[0]])) {
         if (path.length > 1) {
           const targetArray = (<Array<number | string>>target[path[0]]).slice(
             0
