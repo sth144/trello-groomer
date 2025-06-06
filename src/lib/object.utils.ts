@@ -1,6 +1,6 @@
 export type ConfigObj = { [s: string]: ConfigPropType };
 export type ConfigPropType = number | boolean | string | object;
-import { getNDaysFromNow } from './date.utils';
+import { getNDaysFromNow } from "./date.utils";
 
 export type RemovalInfo = {
   path: string[];
@@ -35,7 +35,7 @@ export function detectRemovals(
             });
           }
         }
-      } else if (typeof oldObject[k] === 'object') {
+      } else if (typeof oldObject[k] === "object") {
         /** call recursively on object properties */
         removals = removals.concat(
           detectRemovals(newObject[k] as ConfigObj, oldObject[k] as ConfigObj, [
@@ -68,14 +68,14 @@ export function detectLiteralChanges(
     if (oldObject.hasOwnProperty(k)) {
       if (typeof newObject[k] === typeof oldObject[k]) {
         switch (typeof newObject[k]) {
-          case 'string':
-          case 'number': {
+          case "string":
+          case "number": {
             if (newObject[k] !== oldObject[k]) {
               updates.push({ dotPath: [...pathSoFar, k], value: newObject[k] });
             }
             break;
           }
-          case 'object': {
+          case "object": {
             if (!Array.isArray(newObject[k])) {
               updates = updates.concat(
                 detectLiteralChanges(
@@ -88,7 +88,7 @@ export function detectLiteralChanges(
             break;
           }
         }
-      } else if (typeof newObject[k] !== 'object') {
+      } else if (typeof newObject[k] !== "object") {
         updates.push({ dotPath: [...pathSoFar, k], value: newObject[k] });
       }
     }
@@ -103,7 +103,7 @@ export function updateLiteralsByDotPath(
   updates.forEach((update) => {
     if (target.hasOwnProperty(update.dotPath[0])) {
       if (
-        typeof target[update.dotPath[0]] === 'object' &&
+        typeof target[update.dotPath[0]] === "object" &&
         !Array.isArray(target[update.dotPath[0]])
       ) {
         updateLiteralsByDotPath(
@@ -144,7 +144,7 @@ export function removePropsByDotPath(
         } else {
           delete target[path[0]];
         }
-      } else if (typeof target[path[0]] === 'object') {
+      } else if (typeof target[path[0]] === "object") {
         if (path.length === 1) {
           delete target[path[0]];
         } else {
@@ -171,7 +171,7 @@ export function syncObjectsWithPreference(
   /** sync objects */
   Object.keys(preferred).forEach((k) => {
     /** if property is literal, prefer value from card */
-    if (['string', 'number', 'boolean'].indexOf(typeof preferred[k]) !== -1) {
+    if (["string", "number", "boolean"].indexOf(typeof preferred[k]) !== -1) {
       Object.assign(result, {
         [k]: preferred[k],
       });
@@ -196,7 +196,7 @@ export function syncObjectsWithPreference(
       Object.assign(result, {
         [k]: resultPropArr,
       });
-    } else if (typeof preferred[k] === 'object') {
+    } else if (typeof preferred[k] === "object") {
       let resultPropObj = preferred[k];
       /** recursively sync object... */
       if (secondary.hasOwnProperty(k)) {

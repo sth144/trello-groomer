@@ -3,7 +3,11 @@ import { ToDoBoardModel } from '../todo.groomer';
 import { CheckItem } from '@base/lib/checklist.interface';
 
 const RESEARCH_TASK_TAG = '[research task]';
-const RESEARCH_TASK_CARD_KEYWORDS = ['research tasks', 'research'];
+const RESEARCH_TASK_CARD_KEYWORDS = [
+  'research tasks',
+  'research task',
+  'research',
+];
 
 export async function processResearchTasks(
   todoController: BoardController<ToDoBoardModel>

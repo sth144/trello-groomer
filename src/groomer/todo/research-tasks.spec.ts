@@ -1,8 +1,8 @@
-import { processResearchTasks } from './research-tasks';
-import { CheckItem, Checklist } from '@base/lib/checklist.interface';
-import { expect } from 'chai';
+import { processResearchTasks } from "./research-tasks";
+import { CheckItem, Checklist } from "@base/lib/checklist.interface";
+import { expect } from "chai";
 
-describe('processResearchTasks (manual mocks)', () => {
+describe("processResearchTasks (manual mocks)", () => {
   let mockTodoController: any;
 
   beforeEach(() => {
@@ -10,7 +10,7 @@ describe('processResearchTasks (manual mocks)', () => {
       BoardModel: {
         getAllCards: async (): Promise<any[]> => [],
         getListByName: (name: string): { id: string } => ({
-          id: name.toLowerCase().replace(/\s/g, ''),
+          id: name.toLowerCase().replace(/\s/g, ""),
         }),
       },
       getChecklistsForCardId: async (_: string): Promise<Checklist[]> => [],
@@ -18,16 +18,17 @@ describe('processResearchTasks (manual mocks)', () => {
         _cardId: string,
         title: string
       ): Promise<Checklist> => ({
-        id: 'mockChecklistId',
+        id: "mockChecklistId",
         name: title,
         checkItems: [] as CheckItem[],
+        idCard: Math.random().toString(36),
       }),
       addCard: async (
         cardData: any,
         _listId: string,
         _fromTemplate: boolean
       ): Promise<any> => ({
-        id: 'newCardId',
+        id: "newCardId",
         name: cardData.name,
       }),
       addCheckItemToChecklist: async (
@@ -42,11 +43,11 @@ describe('processResearchTasks (manual mocks)', () => {
     };
   });
 
-  it('creates a new research task card when none exist and checklist is empty', async () => {
+  it("creates a new research task card when none exist and checklist is empty", async () => {
     const researchTaskCard = {
-      name: '[research task] quantum computing',
-      desc: 'Research quantum computing basics',
-      id: 'researchCard1',
+      name: "[research task] quantum computing",
+      desc: "Research quantum computing basics",
+      id: "researchCard1",
     };
 
     mockTodoController.BoardModel.getAllCards = async (): Promise<any[]> => [
@@ -71,30 +72,30 @@ describe('processResearchTasks (manual mocks)', () => {
 
     await processResearchTasks(mockTodoController);
 
-    expect(addedItems).to.contain('Research quantum computing basics');
-    expect(deletedCards).to.contain('researchCard1');
+    expect(addedItems).to.contain("Research quantum computing basics");
+    expect(deletedCards).to.contain("researchCard1");
   });
 
-  it('adds item to existing research task checklist', async () => {
+  it("adds item to existing research task checklist", async () => {
     const existingCard = {
-      name: 'Research Tasks',
-      id: 'card1',
+      name: "Research Tasks",
+      id: "card1",
       due: new Date().toISOString(),
-      idList: 'today',
+      idList: "today",
     };
 
     const checklist: Checklist = {
-      id: 'checklist1',
-      name: 'Checklist',
-      idCard: '0',
+      id: "checklist1",
+      name: "Checklist",
+      idCard: "0",
       checkItems: [] as CheckItem[],
     };
 
     mockTodoController.BoardModel.getAllCards = async (): Promise<any[]> => [
       {
-        name: '[research task] machine learning',
-        desc: 'Explore machine learning frameworks',
-        id: 'researchCard2',
+        name: "[research task] machine learning",
+        desc: "Explore machine learning frameworks",
+        id: "researchCard2",
       },
       existingCard,
     ];
@@ -121,33 +122,33 @@ describe('processResearchTasks (manual mocks)', () => {
 
     await processResearchTasks(mockTodoController);
 
-    expect(addedItems).to.contain('Explore machine learning frameworks');
-    expect(deletedCards).to.contain('researchCard2');
+    expect(addedItems).to.contain("Explore machine learning frameworks");
+    expect(deletedCards).to.contain("researchCard2");
   });
 
-  it('does not add duplicate checklist items', async () => {
+  it("does not add duplicate checklist items", async () => {
     const researchTaskCard = {
-      name: '[research task] blockchain',
-      desc: 'Blockchain fundamentals',
-      id: 'researchCard3',
+      name: "[research task] blockchain",
+      desc: "Blockchain fundamentals",
+      id: "researchCard3",
     };
 
     const researchCard = {
-      name: 'Research Tasks',
-      id: 'card3',
+      name: "Research Tasks",
+      id: "card3",
       due: new Date().toISOString(),
-      idList: 'today',
+      idList: "today",
     };
 
     const checklist: Checklist = {
-      id: 'checklist2',
-      name: 'Checklist',
-      idCard: 'card3',
+      id: "checklist2",
+      name: "Checklist",
+      idCard: "card3",
       checkItems: [
         {
-          id: 'item1',
-          name: 'Blockchain fundamentals',
-          state: 'incomplete',
+          id: "item1",
+          name: "Blockchain fundamentals",
+          state: "incomplete",
         },
       ] as CheckItem[],
     };
@@ -179,7 +180,7 @@ describe('processResearchTasks (manual mocks)', () => {
 
     await processResearchTasks(mockTodoController);
 
-    expect(addedItems).to.not.contain('Blockchain fundamentals'); // already exists
-    expect(deletedCards).to.not.contain('researchCard3'); // description already matched
+    expect(addedItems).to.not.contain("Blockchain fundamentals"); // already exists
+    expect(deletedCards).to.not.contain("researchCard3"); // description already matched
   });
 });
