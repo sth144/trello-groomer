@@ -12,7 +12,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
-    "types": ["node", "mocha"],
+    "types": ["node", "mocha", "chai"],
     "typeRoots": ["node_modules/@types"],
     "rootDirs": ["src"],
     "baseUrl": "src",
