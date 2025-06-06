@@ -1,29 +1,31 @@
-import { processGroceryListItems } from './grocery-list-items';
-import { CheckItem, Checklist } from '@base/lib/checklist.interface';
+import { processGroceryListItems } from "./grocery-list-items";
+import { CheckItem, Checklist } from "@base/lib/checklist.interface";
+import { expect } from "chai";
 
-describe('processGroceryListItems (manual mocks)', () => {
+describe("processGroceryListItems (manual mocks)", () => {
   let mockTodoController: any;
 
   beforeEach(() => {
     mockTodoController = {
       BoardModel: {
-        getAllCards: async () => [],
+        getAllCards: async (): Promise<string[]> => [],
         getListByName: (name: string) => ({
-          id: name.toLowerCase().replace(/\s/g, ''),
+          id: name.toLowerCase().replace(/\s/g, ""),
         }),
       },
-      getChecklistsForCardId: async (cardId: string) => [],
+      getChecklistsForCardId: async (cardId: string): Promise<string[]> => [],
       addChecklistToCard: async (cardId: string, title: string) => ({
-        id: 'mockChecklistId',
+        id: "mockChecklistId",
         name: title,
-        checkItems: [],
+        checkItems: [] as any,
+        idCard: cardId,
       }),
       addCard: async (
         cardData: any,
         listId: string,
         fromTemplate: boolean
       ) => ({
-        id: 'newCardId',
+        id: "newCardId",
         name: cardData.name,
       }),
       addCheckItemToChecklist: async (
@@ -38,12 +40,12 @@ describe('processGroceryListItems (manual mocks)', () => {
     };
   });
 
-  it('creates a new grocery list card when none exist and checklist is empty', async () => {
+  it("creates a new grocery list card when none exist and checklist is empty", async () => {
     // simulate input card with "[Grocery List Item]" title and description
     const groceryItemCard = {
-      name: '[Grocery List Item] milk',
-      desc: 'Milk',
-      id: 'groceryCard1',
+      name: "[Grocery List Item] milk",
+      desc: "Milk",
+      id: "groceryCard1",
     };
 
     // simulate all cards (only grocery item cards)
@@ -65,30 +67,30 @@ describe('processGroceryListItems (manual mocks)', () => {
 
     await processGroceryListItems(mockTodoController);
 
-    expect(addedItems).toContain('Milk');
-    expect(deletedCards).toContain('groceryCard1');
+    expect(addedItems).contain("Milk");
+    expect(deletedCards).contain("groceryCard1");
   });
 
-  it('adds item to existing grocery list checklist', async () => {
+  it("adds item to existing grocery list checklist", async () => {
     const existingCard = {
-      name: 'Groceries',
-      id: 'card1',
+      name: "Groceries",
+      id: "card1",
       due: new Date().toISOString(),
-      idList: 'today',
+      idList: "today",
     };
 
     const checklist: Checklist = {
-      id: 'checklist1',
-      name: 'Checklist',
-      idCard: '0',
+      id: "checklist1",
+      name: "Checklist",
+      idCard: "0",
       checkItems: [],
     };
 
     mockTodoController.BoardModel.getAllCards = async () => [
       {
-        name: '[Grocery List Item] eggs',
-        desc: 'Eggs',
-        id: 'groceryCard2',
+        name: "[Grocery List Item] eggs",
+        desc: "Eggs",
+        id: "groceryCard2",
       },
       existingCard,
     ];
@@ -111,32 +113,32 @@ describe('processGroceryListItems (manual mocks)', () => {
 
     await processGroceryListItems(mockTodoController);
 
-    expect(addedItems).toContain('Eggs');
-    expect(deletedCards).toContain('groceryCard2');
+    expect(addedItems).contain("Eggs");
+    expect(deletedCards).contain("groceryCard2");
   });
 
-  it('does not add duplicate checklist items', async () => {
+  it("does not add duplicate checklist items", async () => {
     const groceryItem = {
-      name: '[Grocery List Item] Bread',
-      desc: 'Bread',
-      id: 'groceryCard3',
+      name: "[Grocery List Item] Bread",
+      desc: "Bread",
+      id: "groceryCard3",
     };
 
     const groceryCard = {
-      name: 'Groceries',
-      id: 'card3',
+      name: "Groceries",
+      id: "card3",
       due: new Date().toISOString(),
-      idList: 'today',
+      idList: "today",
     };
 
     const checklist = {
-      id: 'checklist2',
-      name: 'Checklist',
+      id: "checklist2",
+      name: "Checklist",
       checkItems: [
         {
-          id: 'item1',
-          name: 'Bread',
-          state: 'incomplete',
+          id: "item1",
+          name: "Bread",
+          state: "incomplete",
         },
       ],
     };
@@ -164,7 +166,7 @@ describe('processGroceryListItems (manual mocks)', () => {
 
     await processGroceryListItems(mockTodoController);
 
-    expect(addedItems).not.toContain('Bread'); // already exists
-    expect(deletedCards).not.toContain('groceryCard3'); // description already matched
+    expect(addedItems).not.contain("Bread"); // already exists
+    expect(deletedCards).not.contain("groceryCard3"); // description already matched
   });
 });
