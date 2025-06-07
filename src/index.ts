@@ -1,14 +1,14 @@
-import { ToDoGroomer } from './groomer/todo.groomer';
-import { WorkGroomer } from './groomer/work.groomer';
-import { writeFileSync } from 'fs';
-import { join } from 'path';
-import { logger } from './lib/logger';
-import { MediaGroomer } from './groomer/media.groomer';
+import { ToDoGroomer } from "./groomer/todo.groomer";
+import { WorkGroomer } from "./groomer/work.groomer";
+import { writeFileSync } from "fs";
+import { join } from "path";
+import { logger } from "./lib/logger";
+import { MediaGroomer } from "./groomer/media.groomer";
 
 let whichGroomer: string = null;
 
 if (process.argv.length < 3) {
-  logger.error('Usage: node dist/index.js ${groomer}');
+  logger.error("Usage: node dist/index.js ${groomer}");
   process.exit(1);
 } else {
   whichGroomer = process.argv[2];
@@ -19,22 +19,24 @@ writeFileSync(
   process.pid.toString()
 );
 
-process.on('unhandledRejection', (reason: any, p: Promise<any>) => {
+process.on("unhandledRejection", (reason: any, p: Promise<any>) => {
   logger.error(reason);
 });
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:');
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception:");
   logger.error(error.stack);
 });
-const CronJob = require('cron').CronJob;
+
+const CronJob = require("cron").CronJob;
 
 let mainMutex = false,
   mainJobNo = 0;
 
 switch (whichGroomer) {
-  case 'work': {
+  case "work": {
     const workJob = new CronJob(
-      '0 */30 * * * *' /** time pattern */,
+      "0 */30 * * * *" /** time pattern */,
       async () => {
         logger.info(
           `************************************` +
@@ -45,7 +47,7 @@ switch (whichGroomer) {
         );
         let failureTimeout: NodeJS.Timeout;
         if (!mainMutex) {
-          logger.info('Mutex acquired');
+          logger.info("Mutex acquired");
           [mainMutex, mainJobNo] = [true, mainJobNo + 1];
           try {
             failureTimeout = setTimeout(
@@ -79,7 +81,7 @@ switch (whichGroomer) {
       } /** onTick */,
       null /** onComplete */,
       false /** start (?) */,
-      'America/Chicago' /** time zone */,
+      "America/Chicago" /** time zone */,
       this /** context (?) */,
       true /** run on init, runs right away, then begins running every 10 min */
     );
@@ -87,9 +89,9 @@ switch (whichGroomer) {
     workJob.start();
     break;
   }
-  case 'media': {
+  case "media": {
     const mediaJob = new CronJob(
-      '0 */30 * * * *' /** time pattern */,
+      "0 */30 * * * *" /** time pattern */,
       async () => {
         logger.info(
           `************************************` +
@@ -100,13 +102,13 @@ switch (whichGroomer) {
         );
         let failureTimeout: NodeJS.Timeout;
         if (!mainMutex) {
-          logger.info('Mutex acquired');
+          logger.info("Mutex acquired");
           [mainMutex, mainJobNo] = [true, mainJobNo + 1];
           try {
             const failureTimeout = setTimeout(
               () => {
                 mainMutex = false;
-                throw new Error('Job timed out');
+                throw new Error("Job timed out");
               },
               20 * 60 * 1000
             );
@@ -134,7 +136,7 @@ switch (whichGroomer) {
       } /** onTick */,
       null /** onComplete */,
       false /** start (?) */,
-      'America/Chicago' /** time zone */,
+      "America/Chicago" /** time zone */,
       this /** context (?) */,
       true /** run on init, runs right away, then begins running every 10 min */
     );
@@ -144,9 +146,9 @@ switch (whichGroomer) {
     break;
   }
   default:
-  case 'todo': {
+  case "todo": {
     const todoJob = new CronJob(
-      '0 */5 * * * *' /** time pattern */,
+      "0 */5 * * * *" /** time pattern */,
       async () => {
         logger.info(
           `************************************` +
@@ -157,13 +159,13 @@ switch (whichGroomer) {
         );
         let failureTimeout: NodeJS.Timeout;
         if (!mainMutex) {
-          logger.info('Mutex acquired');
+          logger.info("Mutex acquired");
           [mainMutex, mainJobNo] = [true, mainJobNo + 1];
           try {
             const failureTimeout = setTimeout(
               () => {
                 mainMutex = false;
-                throw new Error('Job timed out');
+                throw new Error("Job timed out");
               },
               20 * 60 * 1000
             );
@@ -191,7 +193,7 @@ switch (whichGroomer) {
       } /** onTick */,
       null /** onComplete */,
       false /** start (?) */,
-      'America/Chicago' /** time zone */,
+      "America/Chicago" /** time zone */,
       this /** context (?) */,
       true /** run on init, runs right away, then begins running every 10 min */
     );
