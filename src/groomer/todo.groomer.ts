@@ -1,6 +1,6 @@
-import { BoardModel } from '../model/board.model';
-import { List } from '../lib/list.interface';
-import { BoardController } from '../controller/board.controller';
+import { BoardModel } from "../model/board.model";
+import { List } from "../lib/list.interface";
+import { BoardController } from "../controller/board.controller";
 import {
   cardIsComplete,
   cardDueToday,
@@ -10,18 +10,19 @@ import {
   cardDueWithinTwoDays,
   Not,
   wasMovedFromToListFilterFactory,
-} from '../lib/card.filters';
-import { processGroceryListItems } from './todo/grocery-list-items';
-import { processHomelabListItems } from './todo/homelab-tickets';
-import { processSprintListItems } from './todo/sprint-items';
-import { processResearchTasks } from './todo/research-tasks'; // Add this import
-import { DateRegexes, getMonthNumFromAbbrev } from '../lib/date.utils';
-import { parseAutoDueConfig } from '../lib/parse.utils';
-import { join } from 'path';
-import { existsSync, readdirSync } from 'fs';
-import { logger } from '../lib/logger';
-const secrets = require('../../config/key.json');
-const boards = require('../../config/boards.json');
+} from "../lib/card.filters";
+import { processGroceryListItems } from "./todo/grocery-list-items";
+import { processHomelabListItems } from "./todo/homelab-tickets";
+import { processSprintListItems } from "./todo/sprint-items";
+import { processTaskAggregatorItems } from "./todo/task-aggregator";
+import { processResearchTasks } from "./todo/research-tasks"; // Add this import
+import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
+import { parseAutoDueConfig } from "../lib/parse.utils";
+import { join } from "path";
+import { existsSync, readdirSync } from "fs";
+import { logger } from "../lib/logger";
+const secrets = require("../../config/key.json");
+const boards = require("../../config/boards.json");
 
 /*************************************************************************************************
  * This file defines the shape of the ToDo board model, and implements the grooming behavior for *
@@ -76,14 +77,14 @@ export const ToDoGroomer = function () {
 
   const initialize = async () => {
     start = new Date();
-    logger.info('Started ' + start.toString());
+    logger.info("Started " + start.toString());
 
-    logger.info('Building models');
+    logger.info("Building models");
     /** instantiate private data members, board model and controller */
     todoModel = new ToDoBoardModel(boards.todo.id);
     historyModel = new HistoryBoardModel(boards.history.id);
 
-    logger.info('Initializing controllers');
+    logger.info("Initializing controllers");
     todoController = new BoardController<ToDoBoardModel>(todoModel, {
       key: secrets.key,
       token: secrets.token,
@@ -101,30 +102,30 @@ export const ToDoGroomer = function () {
    *  NOTE: order is important here, do not change order without careful consideration
    */
   const groom = async () => {
-    logger.info('Grooming (ToDo)');
+    logger.info("Grooming (ToDo)");
 
     delete require.cache;
 
     logger.info(
-      'Syncing local config JSON files with configuration cards on board'
+      "Syncing local config JSON files with configuration cards on board"
     );
 
     await todoController.syncConfigJsonWithCard(
-      'auto-due.config.json',
-      'Auto-Due Configuration'
+      "auto-due.config.json",
+      "Auto-Due Configuration"
     );
     await todoController.syncConfigJsonWithCard(
-      'auto-label.config.todo.json',
-      'Auto-Label Configuration'
+      "auto-label.config.todo.json",
+      "Auto-Label Configuration"
     );
     await todoController.syncConfigJsonWithCard(
-      'auto-link.config.todo.json',
-      'Auto-Link Configuration'
+      "auto-link.config.todo.json",
+      "Auto-Link Configuration"
     );
 
     // TODO: how much of this procedure could be batched/parallelized?
 
-    logger.info('Adding history lists from past 12 months to data model');
+    logger.info("Adding history lists from past 12 months to data model");
     /**
      * automatically add all history lists from past 12 months to board model. Names will be `${monthname} ${year}`
      *  - this should probably be factored out into groomer, this is not good generalized behavior
@@ -134,12 +135,12 @@ export const ToDoGroomer = function () {
     await historyController.addListsToModelIfNameMeetsConditions([
       (x: List) => {
         return (
-          x.hasOwnProperty('name') &&
+          x.hasOwnProperty("name") &&
           x.name.match(DateRegexes.MonthYear) !== null
         );
       },
       (x: List) => {
-        if (!x.hasOwnProperty('name')) {
+        if (!x.hasOwnProperty("name")) {
           return false;
         }
         /** if list in current calendar year */
@@ -177,23 +178,23 @@ export const ToDoGroomer = function () {
     // });
     // await closed;
 
-    logger.info(`Cache contents: ${readdirSync('./cache')}`);
+    logger.info(`Cache contents: ${readdirSync("./cache")}`);
 
     const labelModelOutputPath = join(
       process.cwd(),
-      'cache/label.model-output.todo.json'
+      "cache/label.model-output.todo.json"
     );
 
     if (existsSync(labelModelOutputPath)) {
       if (
-        require.hasOwnProperty('cache') &&
+        require.hasOwnProperty("cache") &&
         require.cache.hasOwnProperty(labelModelOutputPath)
       ) {
         delete require.cache[labelModelOutputPath];
       }
       const labelsFromModel = require(labelModelOutputPath);
 
-      logger.info('Labels from ML model:');
+      logger.info("Labels from ML model:");
       logger.info(JSON.stringify(labelsFromModel));
 
       for (const labelName in labelsFromModel) {
@@ -210,12 +211,12 @@ export const ToDoGroomer = function () {
     // TODO: once model implemented, reconsider how autolabelling occurs
 
     /** auto-label cards based on titles */
-    logger.info('Adding labels according to keywords in card titles');
+    logger.info("Adding labels according to keywords in card titles");
 
     const addedLabels = new Promise(async (res) => {
       /** work keyword conflicts with a lot of irrelevant card titles */
       const allLabels = todoController.AllLabelNames.filter(
-        (x) => x !== 'Work'
+        (x) => x !== "Work"
       );
       for (let labelName of allLabels) {
         await todoController.addLabelToCardsIfTextContains(
@@ -229,7 +230,7 @@ export const ToDoGroomer = function () {
 
     const autoLabelConfigPath = join(
       process.cwd(),
-      'config/auto-label.config.todo.json'
+      "config/auto-label.config.todo.json"
     );
     if (existsSync(autoLabelConfigPath)) {
       const autoLabelConfig = require(autoLabelConfigPath);
@@ -247,22 +248,22 @@ export const ToDoGroomer = function () {
         });
     }
 
-    logger.info('Updating task dependencies');
+    logger.info("Updating task dependencies");
 
     /**
      * groom checklists
      *  - update task and prep dependencies, generate followups
      */
     await todoController.updateTaskDependencies(
-      'Tasks',
+      "Tasks",
       /** ignore (necessary?) */ historyLists
     );
     await todoController.updatePrepDependencies(
-      'Prep',
+      "Prep",
       /** ignore (necessary?) */ historyLists
     );
     await todoController.updateFollowupDependencies(
-      'Followup',
+      "Followup",
       /** ignore (necessary?) */ historyLists
     );
 
@@ -272,14 +273,14 @@ export const ToDoGroomer = function () {
     /** assign due dates to cards without due dates */
     const autoDueConfigPath = join(
       process.cwd(),
-      'config/auto-due.config.json'
+      "config/auto-due.config.json"
     );
     if (existsSync(autoDueConfigPath)) {
       const autoDueConfig = parseAutoDueConfig(autoDueConfigPath) as {
         [s: string]: number;
       };
 
-      logger.info('Updating due dates based on manual list movements');
+      logger.info("Updating due dates based on manual list movements");
 
       await todoController.assignDueDatesIf(
         todoModel.lists.backlog.id,
@@ -347,12 +348,12 @@ export const ToDoGroomer = function () {
 
     /** auto-link cards which share a label and a common word (>= 3 letters) in title */
     await todoController.autoLinkRelatedCards(
-      require(join(__dirname, '../../config/auto-link.config.todo.json'))
+      require(join(__dirname, "../../config/auto-link.config.todo.json"))
         .ignoreWords
     );
     // TODO: instead of ignoreWords, could use a stopwords library?
 
-    logger.info('Updating list placements');
+    logger.info("Updating list placements");
 
     /** move completed items to Done */
     await todoController.moveCardsFromToIf(
@@ -418,44 +419,48 @@ export const ToDoGroomer = function () {
       cardHasDueDate
     );
 
-    logger.info('Marking appropriate items done');
+    logger.info("Marking appropriate items done");
 
     await todoController.markCardsInListDone(todoModel.lists.done.id);
 
-    logger.info('Processing grocery list items');
+    logger.info("Processing grocery list items");
 
     await processGroceryListItems(todoController);
 
-    logger.info('Processing sprint list items');
+    logger.info("Processing sprint list items");
 
     await processSprintListItems(todoController);
 
-    logger.info('Processing homelab ticket');
+    logger.info("Processing homelab ticket");
 
     await processHomelabListItems(todoController);
 
-    logger.info('Processing research tasks');
+    logger.info("Processing research tasks");
 
     await processResearchTasks(todoController);
 
-    logger.info('Pruning repeat-labeled cards from history lists');
+    logger.info("Processing generic task aggregator items");
+
+    await processTaskAggregatorItems(todoController);
+
+    logger.info("Pruning repeat-labeled cards from history lists");
 
     historyLists.forEach(async (historyList) => {
       await historyController.deleteCardsInListIfLabeled(
         historyList.id,
-        'Recurring'
+        "Recurring"
       );
     });
 
-    logger.info('Removing due dates from cards in backburner list');
+    logger.info("Removing due dates from cards in backburner list");
     await todoController.removeDueDateFromCardsInList(
       todoModel.lists.backburner.id
     );
 
     logger.info(
-      'dump JSON data for card labels to train machine learning model'
+      "dump JSON data for card labels to train machine learning model"
     );
-    todoController.dump('todo');
+    todoController.dump("todo");
 
     const curTime = new Date();
     const runtime = (curTime.getTime() - start.getTime()) / 1000;
