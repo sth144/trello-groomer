@@ -141,7 +141,7 @@ async function createNewTaskAggregatorFromTemplate(
   const newCard = await todoController.addCard(
     {
       name: domainName,
-      desc: `Auto-generated from task-aggregator.ts`,
+      desc: `Auto-generated from task-aggregator.ts, domain ${domainName}`,
       idList: thisMonthListId,
       pos: "top",
     },
