@@ -3,7 +3,7 @@ import { ToDoBoardModel } from "../todo.groomer";
 import { CheckItem } from "@base/lib/checklist.interface";
 import { ICard } from "@base/lib/card.interface"; /** (Importing ICard) */
 
-const ITEM_TAG_PATTERN = /^\[.* item\]$/;
+const ITEM_TAG_PATTERN = /^\[(.*) item\]$/;
 
 export async function processTaskAggregatorItems(
   todoController: BoardController<ToDoBoardModel>
@@ -15,6 +15,9 @@ export async function processTaskAggregatorItems(
   const taskCards = allCards.filter(
     (card: ICard) => !card.dueComplete && ITEM_TAG_PATTERN.test(card.name)
   );
+
+  console.log("Task Cards:");
+  console.log(taskCards);
 
   /** (Group cards by the captured group in ITEM_TAG_PATTERN) */
   const groupedCards: Record<string, ICard[]> = taskCards.reduce(
@@ -33,8 +36,12 @@ export async function processTaskAggregatorItems(
     {}
   );
 
+  console.log("Grouped Cards:");
+  console.log(groupedCards);
+
   for (const groupKey in groupedCards) {
     const cardsInGroup = groupedCards[groupKey];
+    console.log("Group Key:", groupKey);
 
     /** (Find or create the aggregator card) */
     const existingAggregatorCards = allCards.filter(
@@ -82,7 +89,7 @@ export async function processTaskAggregatorItems(
       ) {
         await todoController.addCheckItemToChecklist(
           targetChecklist.id,
-          card.name
+          card.desc
         );
       }
     }
