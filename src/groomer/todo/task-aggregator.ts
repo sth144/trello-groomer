@@ -131,6 +131,13 @@ export async function processTaskAggregatorItems(
           );
         }
       }
+
+      /** sort target checklist */
+      console.log("Sorting checklist items");
+      await todoController.sortChecklistIncompleteFirst(targetChecklist.id);
+
+      console.log("Deduplicating checklist items");
+      await todoController.deduplicateChecklistItems(targetChecklist.id);
     }
 
     /** (Delete the original task cards) */

@@ -1,12 +1,12 @@
-import { BoardController } from '@base/controller/board.controller';
-import { ToDoBoardModel } from '../todo.groomer';
-import { CheckItem } from '@base/lib/checklist.interface';
+import { BoardController } from "@base/controller/board.controller";
+import { ToDoBoardModel } from "../todo.groomer";
+import { CheckItem } from "@base/lib/checklist.interface";
 
-const RESEARCH_TASK_TAG = '[research task]';
+const RESEARCH_TASK_TAG = "[research task]";
 const RESEARCH_TASK_CARD_KEYWORDS = [
-  'research tasks',
-  'research task',
-  'research',
+  "research tasks",
+  "research task",
+  "research",
 ];
 
 export async function processResearchTasks(
@@ -22,18 +22,18 @@ export async function processResearchTasks(
   /** extract descriptions from each */
   const researchTaskItems = researchTaskCards.map((card) => card.desc);
 
-  console.log('Research task items');
+  console.log("Research task items");
   console.log(researchTaskCards);
 
-  const doneListId = todoController.BoardModel.getListByName('Done').id;
-  const backlogListId = todoController.BoardModel.getListByName('Backlog').id;
+  const doneListId = todoController.BoardModel.getListByName("Done").id;
+  const backlogListId = todoController.BoardModel.getListByName("Backlog").id;
   const thisMonthListId =
-    todoController.BoardModel.getListByName('This Month').id;
-  const inboxListId = todoController.BoardModel.getListByName('Inbox').id;
+    todoController.BoardModel.getListByName("This Month").id;
+  const inboxListId = todoController.BoardModel.getListByName("Inbox").id;
   const thisWeekListId =
-    todoController.BoardModel.getListByName('This Week').id;
-  const tomorrowListId = todoController.BoardModel.getListByName('Tomorrow').id;
-  const todayListId = todoController.BoardModel.getListByName('Today').id;
+    todoController.BoardModel.getListByName("This Week").id;
+  const tomorrowListId = todoController.BoardModel.getListByName("Tomorrow").id;
+  const todayListId = todoController.BoardModel.getListByName("Today").id;
 
   /** locate latest/soonest due card with "Research Tasks" in title */
   const existingResearchTaskCards = allCards
@@ -59,8 +59,8 @@ export async function processResearchTasks(
       ].includes(card.idList);
     })
     .sort((A, B) => {
-      const dateA = A.due || new Date('1971-12-31'); // If dueDate is null/undefined, set it to a future date
-      const dateB = B.due || new Date('1971-12-31');
+      const dateA = A.due || new Date("1971-12-31"); // If dueDate is null/undefined, set it to a future date
+      const dateB = B.due || new Date("1971-12-31");
       if (dateA > dateB) {
         return -1;
       } else if (dateB < dateA) {
@@ -68,7 +68,7 @@ export async function processResearchTasks(
       }
       return 0;
     });
-  console.log('Research Task Cards');
+  console.log("Research Task Cards");
   console.log(existingResearchTaskCards);
 
   let latestDueResearchTaskCard = null;
@@ -78,7 +78,7 @@ export async function processResearchTasks(
 
   if (!latestDueResearchTaskCard) {
     /** if no card found, create from template */
-    console.log('No card found, creating card in list');
+    console.log("No card found, creating card in list");
     console.log(tomorrowListId);
     latestDueResearchTaskCard = await createNewResearchTaskCardFromTemplate(
       todoController,
@@ -88,24 +88,24 @@ export async function processResearchTasks(
     console.log(latestDueResearchTaskCard);
   }
 
-  console.log('Getting checklists from research task card');
+  console.log("Getting checklists from research task card");
 
   /** find a checklist within research task card */
   let checklists = await todoController.getChecklistsForCardId(
     latestDueResearchTaskCard.id
   );
 
-  console.log('Got checklists:');
+  console.log("Got checklists:");
   console.log(checklists);
 
   if (checklists.length === 0) {
     // if no checklist found, create one!!! and update checklists var
-    console.log('Adding new checklist');
+    console.log("Adding new checklist");
     const newChecklist = await todoController.addChecklistToCard(
       latestDueResearchTaskCard.id,
-      'Checklist'
+      "Checklist"
     );
-    console.log('Successfully added new checklist');
+    console.log("Successfully added new checklist");
 
     checklists = [newChecklist];
   }
@@ -113,7 +113,7 @@ export async function processResearchTasks(
   let targetChecklist = checklists[0];
 
   let targetChecklistItemsComplete = targetChecklist.checkItems.filter(
-    (item: CheckItem) => item.state === 'complete'
+    (item: CheckItem) => item.state === "complete"
   ).length;
   let targetChecklistTotalItems = targetChecklist.checkItems.length;
 
@@ -142,7 +142,7 @@ export async function processResearchTasks(
 
     /** move "incomplete" state items from original card to a new checklist */
     originalChecklist.checkItems.forEach(async (checkItem: CheckItem) => {
-      if (checkItem.state === 'incomplete') {
+      if (checkItem.state === "incomplete") {
         console.log(`Migrating checklist item ${checkItem.name}`);
         try {
           await todoController.addCheckItemToChecklist(
@@ -180,6 +180,13 @@ export async function processResearchTasks(
     }
   }
 
+  /** sort target checklist */
+  console.log("Sorting checklist items");
+  await todoController.sortChecklistIncompleteFirst(targetChecklist.id);
+
+  console.log("Deduplicating checklist items");
+  await todoController.deduplicateChecklistItems(targetChecklist.id);
+
   /** delete [Research Task] cards */
   for (const card of researchTaskCards) {
     if (
@@ -199,16 +206,16 @@ async function createNewResearchTaskCardFromTemplate(
 ) {
   const newCard = await todoController.addCard(
     {
-      name: 'Research Tasks',
+      name: "Research Tasks",
     },
     tomorrowListId,
     false
   );
 
-  console.log('New Card');
+  console.log("New Card");
   console.log(newCard);
 
-  await todoController.addChecklistToCard(newCard.id, 'Checklist');
+  await todoController.addChecklistToCard(newCard.id, "Checklist");
 
   return newCard;
 }
