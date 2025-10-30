@@ -1,10 +1,10 @@
-import { logger } from './logger';
-import { IsJsonString } from './object.utils';
+import { logger } from "./logger";
+import { IsJsonString } from "./object.utils";
 
 /** allow insecure requests for development */
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-const request = require('request');
+const request = require("request");
 
 export class TrelloHttpClient {
   private numRequestsSent: number = 0;
@@ -24,7 +24,7 @@ export class TrelloHttpClient {
     return new Promise((resolve, reject) => {
       request(
         {
-          method: 'GET',
+          method: "GET",
           uri: this.getLongUrl(url),
           timeout: 60000,
         },
@@ -40,7 +40,7 @@ export class TrelloHttpClient {
 
           if (body !== undefined && body !== null) {
             try {
-              if (typeof body === 'object' || IsJsonString(body)) {
+              if (typeof body === "object" || IsJsonString(body)) {
                 result = JSON.parse(body);
               } else {
                 result = body;
@@ -56,18 +56,23 @@ export class TrelloHttpClient {
     });
   }
 
-  public async asyncPut(url: string): Promise<any> {
+  public async asyncPut(url: string, body: any = null): Promise<any> {
     this.numRequestsSent++;
 
-    const printUrl = url.replace('\n', '').replace('\t', '').replace('\r', '');
+    if (body instanceof Object) {
+      body = JSON.stringify(body);
+    }
+
+    const printUrl = url.replace("\n", "").replace("\t", "").replace("\r", "");
     logger.info(`${this.NumRequests}.) PUT ${printUrl}`);
 
     return new Promise((resolve, reject) => {
       request(
         {
-          method: 'PUT',
+          method: "PUT",
           uri: this.getLongUrl(url),
           timeout: 60000,
+          body,
         },
         (err: Error, response: Response, body: string) => {
           // logger.info(`For PUT ${url}`);
@@ -80,7 +85,7 @@ export class TrelloHttpClient {
           let result = null;
           if (body !== undefined && body !== null) {
             try {
-              if (typeof body === 'object' || IsJsonString(body)) {
+              if (typeof body === "object" || IsJsonString(body)) {
                 result = JSON.parse(body);
               } else {
                 result = body;
@@ -106,14 +111,14 @@ export class TrelloHttpClient {
     logger.info(`POST ${url} ${JSON.stringify(opts)}`);
 
     return new Promise((resolve, reject) => {
-      let params = '';
+      let params = "";
       for (let prop of Object.keys(opts)) {
         params = params.concat(`&${prop}=${opts[prop]}`);
       }
       const uri = `${this.getLongUrl(url)}${params}`;
       request(
         {
-          method: 'POST',
+          method: "POST",
           uri: uri,
           timeout: 60000,
           body,
@@ -130,7 +135,7 @@ export class TrelloHttpClient {
 
           if (body !== undefined && body !== null) {
             try {
-              if (typeof body === 'object' || IsJsonString(body)) {
+              if (typeof body === "object" || IsJsonString(body)) {
                 result = JSON.parse(body);
               } else {
                 result = body;
@@ -154,7 +159,7 @@ export class TrelloHttpClient {
     return new Promise((resolve, reject) => {
       request(
         {
-          method: 'DELETE',
+          method: "DELETE",
           uri: this.getLongUrl(url),
           timeout: 60000,
         },
@@ -170,7 +175,7 @@ export class TrelloHttpClient {
 
           if (body !== undefined && body !== null) {
             try {
-              if (typeof body === 'object' || IsJsonString(body)) {
+              if (typeof body === "object" || IsJsonString(body)) {
                 result = JSON.parse(body);
               } else {
                 result = body;
@@ -191,10 +196,10 @@ export class TrelloHttpClient {
    */
   private getLongUrl(path: string): string {
     let end = `key=${this.secrets.key}&token=${this.secrets.token}`;
-    if (path.indexOf('?') === -1) {
-      end = '?'.concat(end);
+    if (path.indexOf("?") === -1) {
+      end = "?".concat(end);
     } else {
-      end = '&'.concat(end);
+      end = "&".concat(end);
     }
     return `https://api.trello.com/1${path}${end}`;
   }

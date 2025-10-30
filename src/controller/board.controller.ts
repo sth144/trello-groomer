@@ -895,6 +895,108 @@ export class BoardController<T extends BoardModel> {
     writeFileSync(configPath, JSON.stringify(configUpdate, null, 4));
   }
 
+  async sortChecklistItems(
+    checklistId: string,
+    sortedNames: string[]
+  ): Promise<void> {
+    // 1. Fetch all check items
+    const checklist = await this.httpClient.asyncGet(
+      `/checklists/${checklistId}?checkItems=all`
+    );
+
+    if (!checklist?.checkItems?.length) return;
+
+    // 2. Sort based on provided names
+    const sortedItems = [...checklist.checkItems].sort((a, b) => {
+      const aIndex = sortedNames.indexOf(a.name);
+      const bIndex = sortedNames.indexOf(b.name);
+      if (aIndex === -1 && bIndex === -1) return 0;
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+
+    // 3. Update positions on Trello
+    for (let i = 0; i < sortedItems.length; i++) {
+      const item = sortedItems[i];
+      const pos = (i + 1) * 1000; // or use "top"/"bottom"
+
+      await this.httpClient.asyncPut(
+        `/checklists/${checklistId}/checkItems/${item.id}/pos`,
+        { value: pos }
+      );
+    }
+  }
+
+  async sortChecklistIncompleteFirst(checklistId: string): Promise<void> {
+    // 1. Fetch all check items
+    const checklist = await this.httpClient.asyncGet(
+      `/checklists/${checklistId}?checkItems=all`
+    );
+
+    console.log(`Sorting Checklist: ${checklist}`);
+    if (!checklist?.checkItems?.length) return;
+
+    // 2. Partition items into incomplete and complete
+    const incomplete = checklist.checkItems.filter(
+      (i: CheckItem) => i.state === "incomplete"
+    );
+    const complete = checklist.checkItems.filter(
+      (i: CheckItem) => i.state === "complete"
+    );
+
+    // 3. Merge back — incomplete first
+    const sortedItems = [...incomplete, ...complete];
+
+    console.log(`Sorted Items: ${JSON.stringify(sortedItems)}`);
+
+    // 4. Update Trello positions
+    for (let i = 0; i < sortedItems.length; i++) {
+      const item = sortedItems[i];
+      const pos = (i + 1) * 1000;
+
+      await this.httpClient.asyncPut(
+        `/checklists/${checklistId}/checkItems/${item.id}/pos`,
+        { value: pos }
+      );
+    }
+  }
+  async deduplicateChecklistItems(checklistId: string): Promise<void> {
+    // 1. Fetch all check items
+    const checklist = await this.httpClient.asyncGet(
+      `/checklists/${checklistId}?checkItems=all`
+    );
+
+    if (!checklist?.checkItems?.length) return;
+
+    // 2. Track seen names (case-insensitive)
+    const seen = new Set<string>();
+    const duplicates: typeof checklist.checkItems = [];
+
+    for (const item of checklist.checkItems) {
+      const normalized = item.name.trim().toLowerCase();
+      if (seen.has(normalized)) {
+        console.log(`Found duplicate checklist item: ${item.name}`);
+        duplicates.push(item);
+      } else {
+        seen.add(normalized);
+      }
+    }
+
+    // 3. Delete duplicates from Trello
+    for (const dup of duplicates) {
+      await this.httpClient.asyncDelete(
+        `/checklists/${checklistId}/checkItems/${dup.id}`
+      );
+    }
+
+    if (duplicates.length > 0) {
+      console.log(
+        `✅ Removed ${duplicates.length} duplicate checklist item(s) from ${checklist.name}`
+      );
+    }
+  }
+
   /**
    * initialize the board model (pull data from Trello)
    */

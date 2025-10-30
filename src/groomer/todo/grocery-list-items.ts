@@ -187,6 +187,13 @@ export async function processGroceryListItems(
       todoController.deleteCardByID(card.id);
     }
   }
+
+  /** sort target checklist */
+  console.log("Sorting checklist items");
+  await todoController.sortChecklistIncompleteFirst(targetChecklist.id);
+
+  console.log("Deduplicating checklist items");
+  await todoController.deduplicateChecklistItems(targetChecklist.id);
 }
 
 async function createNewGroceryListCardFromTemplate(
