@@ -806,12 +806,13 @@ export class BoardController<T extends BoardModel> {
 
   public async addCheckItemToChecklist(
     checklistId: string,
-    itemName: string
+    itemName: string,
+    pos: "top" | "bottom" = "bottom"
   ): Promise<void> {
     return await this.httpClient
       .asyncPost(`/checklists/${checklistId}/checkItems`, {
         name: itemName,
-        pos: "bottom", // Position the new item at the bottom of the checklist
+        pos, // Use the pos parameter
         checked: false, // Set checked to false for an unchecked item
       })
       .catch((error) => {
@@ -895,40 +896,10 @@ export class BoardController<T extends BoardModel> {
     writeFileSync(configPath, JSON.stringify(configUpdate, null, 4));
   }
 
-  async sortChecklistItems(
-    checklistId: string,
-    sortedNames: string[]
+  async sortChecklistIncompleteFirst(
+    cardId: string,
+    checklistId: string
   ): Promise<void> {
-    // 1. Fetch all check items
-    const checklist = await this.httpClient.asyncGet(
-      `/checklists/${checklistId}?checkItems=all`
-    );
-
-    if (!checklist?.checkItems?.length) return;
-
-    // 2. Sort based on provided names
-    const sortedItems = [...checklist.checkItems].sort((a, b) => {
-      const aIndex = sortedNames.indexOf(a.name);
-      const bIndex = sortedNames.indexOf(b.name);
-      if (aIndex === -1 && bIndex === -1) return 0;
-      if (aIndex === -1) return 1;
-      if (bIndex === -1) return -1;
-      return aIndex - bIndex;
-    });
-
-    // 3. Update positions on Trello
-    for (let i = 0; i < sortedItems.length; i++) {
-      const item = sortedItems[i];
-      const pos = (i + 1) * 1000; // or use "top"/"bottom"
-
-      await this.httpClient.asyncPut(
-        `/checklists/${checklistId}/checkItems/${item.id}/pos`,
-        { value: pos }
-      );
-    }
-  }
-
-  async sortChecklistIncompleteFirst(checklistId: string): Promise<void> {
     // 1. Fetch all check items
     const checklist = await this.httpClient.asyncGet(
       `/checklists/${checklistId}?checkItems=all`
@@ -954,10 +925,10 @@ export class BoardController<T extends BoardModel> {
     for (let i = 0; i < sortedItems.length; i++) {
       const item = sortedItems[i];
       const pos = (i + 1) * 1000;
-
+      console.log(sortedItems[i].name);
       await this.httpClient.asyncPut(
-        `/checklists/${checklistId}/checkItems/${item.id}/pos`,
-        { value: pos }
+        `/cards/${cardId}/checklist/${checklistId}/checkItem/${item.id}?pos=${pos}`,
+        { pos }
       );
     }
   }

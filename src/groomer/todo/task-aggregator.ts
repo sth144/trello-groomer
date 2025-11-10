@@ -89,7 +89,8 @@ export async function processTaskAggregatorItems(
       ) {
         await todoController.addCheckItemToChecklist(
           targetChecklist.id,
-          card.desc
+          card.desc,
+          "top"
         );
       }
     }
@@ -111,6 +112,7 @@ export async function processTaskAggregatorItems(
           groupKey.slice(1) /** (Capitalize the group key) */,
         todoController.BoardModel.getListByName("This Month").id
       );
+      aggregatorCard = newAggregatorCard;
 
       /** (Get checklist on new card) */
       const newChecklist = await todoController.getChecklistsForCardId(
@@ -123,7 +125,8 @@ export async function processTaskAggregatorItems(
         if (checkItem.state === "incomplete") {
           await todoController.addCheckItemToChecklist(
             targetNewChecklist.id,
-            checkItem.name
+            checkItem.name,
+            "top"
           );
           await todoController.removeCheckItemFromChecklist(
             targetChecklist.id,
@@ -134,8 +137,10 @@ export async function processTaskAggregatorItems(
 
       /** sort target checklist */
       console.log("Sorting checklist items");
-      await todoController.sortChecklistIncompleteFirst(targetChecklist.id);
-
+      await todoController.sortChecklistIncompleteFirst(
+        aggregatorCard.id,
+        targetChecklist.id
+      );
       console.log("Deduplicating checklist items");
       await todoController.deduplicateChecklistItems(targetChecklist.id);
     }

@@ -149,7 +149,8 @@ export async function processSprintListItems(
         try {
           await todoController.addCheckItemToChecklist(
             targetChecklist.id,
-            checkItem.name
+            checkItem.name,
+            "top"
           );
 
           /** delete incomplete state items from original card checklist */
@@ -177,14 +178,21 @@ export async function processSprintListItems(
       )
     ) {
       console.log(`Adding item ${newItem} to checklist ${targetChecklist.id}`);
-      await todoController.addCheckItemToChecklist(targetChecklist.id, newItem);
+      await todoController.addCheckItemToChecklist(
+        targetChecklist.id,
+        newItem,
+        "top"
+      );
       itemsToDeleteCardFor.push(newItem);
     }
   }
 
   /** sort target checklist */
   console.log("Sorting checklist items");
-  await todoController.sortChecklistIncompleteFirst(targetChecklist.id);
+  await todoController.sortChecklistIncompleteFirst(
+    latestDueSprintItemListCard.id,
+    targetChecklist.id
+  );
 
   console.log("Deduplicating checklist items");
   await todoController.deduplicateChecklistItems(targetChecklist.id);

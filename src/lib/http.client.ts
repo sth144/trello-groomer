@@ -81,7 +81,13 @@ export class TrelloHttpClient {
           // logger.info(` ${JSON.stringify(response)}`);
           // logger.info("Body: ")
           // logger.info(` ${body}`);
-
+          if (err) {
+            logger.error(`Error during PUT: ${err}`);
+          }
+          console.log(
+            `Response status code: ${(response as unknown as { statusCode: number }).statusCode}`
+          );
+          console.log(`Response body: ${body}`);
           let result = null;
           if (body !== undefined && body !== null) {
             try {
