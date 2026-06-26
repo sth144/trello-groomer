@@ -119,7 +119,12 @@ export class TrelloHttpClient {
     return new Promise((resolve, reject) => {
       let params = "";
       for (let prop of Object.keys(opts)) {
-        params = params.concat(`&${prop}=${opts[prop]}`);
+        if (opts[prop] === undefined || opts[prop] === null) {
+          continue;
+        }
+        params = params.concat(
+          `&${encodeURIComponent(prop)}=${encodeURIComponent(opts[prop])}`
+        );
       }
       const uri = `${this.getLongUrl(url)}${params}`;
       request(

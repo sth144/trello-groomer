@@ -16,6 +16,7 @@ import { processHomelabListItems } from "./todo/homelab-tickets";
 import { processSprintListItems } from "./todo/sprint-items";
 import { processTaskAggregatorItems } from "./todo/task-aggregator";
 import { processResearchTasks } from "./todo/research-tasks"; // Add this import
+import { processBeautification } from "./todo/beautify";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
@@ -456,6 +457,9 @@ export const ToDoGroomer = function () {
     await todoController.removeDueDateFromCardsInList(
       todoModel.lists.backburner.id
     );
+
+    logger.info("Beautifying board (ensuring labels, applying cover colors)");
+    await processBeautification(todoController);
 
     logger.info(
       "dump JSON data for card labels to train machine learning model"

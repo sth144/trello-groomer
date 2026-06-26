@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "applyCovers": true,
+  "ensureLabels": true,
+  "fallbackLabelName": "Misc",
+  "fallbackLabelColor": "black",
+  "maxCoversPerRun": 60,
+  "embedding": {
+    "prefer": ["local", "openai", "tfidf"],
+    "minScore": null,
+    "openai": {
+      "apiKey": "",
+      "model": "text-embedding-3-small",
+      "endpoint": "https://api.openai.com/v1/embeddings"
+    },
+    "local": {
+      "model": "Xenova/all-MiniLM-L6-v2"
+    }
+  }
+}
