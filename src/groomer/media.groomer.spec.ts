@@ -6,6 +6,7 @@ import {
   heuristicClassify,
   mediaCacheEntryIsFresh,
   normalizeTitle,
+  shouldFetchArtworkForLabeledCard,
   shouldMoveNewlyClassifiedCard,
   typeToLabelName,
   typeToListName,
@@ -111,6 +112,26 @@ describe("Media groomer", () => {
           moveLabeledCardsAcrossBoard: true,
         })
       ).to.equal(false);
+    });
+
+    it("does not spend artwork lookup budget while a labeled card still needs moving", () => {
+      expect(
+        shouldFetchArtworkForLabeledCard({
+          needsArtwork: true,
+          shouldMoveByLabel: true,
+          shouldCorrectManaged: false,
+        })
+      ).to.equal(false);
+    });
+
+    it("allows artwork lookup for labeled cards that are already in place", () => {
+      expect(
+        shouldFetchArtworkForLabeledCard({
+          needsArtwork: true,
+          shouldMoveByLabel: false,
+          shouldCorrectManaged: false,
+        })
+      ).to.equal(true);
     });
   });
 

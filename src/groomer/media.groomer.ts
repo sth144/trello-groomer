@@ -312,6 +312,18 @@ export function shouldMoveNewlyClassifiedCard(opts: {
   );
 }
 
+export function shouldFetchArtworkForLabeledCard(opts: {
+  needsArtwork: boolean;
+  shouldMoveByLabel: boolean;
+  shouldCorrectManaged: boolean;
+}) {
+  return (
+    opts.needsArtwork &&
+    !opts.shouldMoveByLabel &&
+    !opts.shouldCorrectManaged
+  );
+}
+
 function isLikelyMusicTitle(title: string) {
   return /\b(album|ep|single|tracklist|spotify|bandcamp|vinyl|lp)\b/.test(
     normalizeTitle(title)
@@ -1271,7 +1283,39 @@ export const MediaGroomer = function () {
     const cards = mediaModel
       .getAllCards()
       .slice()
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        const priority = (card: ICard) => {
+          const labelTypes = mediaTypesFromCardLabels(card);
+          const hasMediaLabel = labelTypes.length > 0;
+          const isInboxCard = card.idList === inboxListId;
+          const isProtectedList = protectedListIds.includes(card.idList);
+          const labelPrimaryType = primaryTypeFromLabels(labelTypes);
+          const labeledTargetListName = labelPrimaryType
+            ? typeToListName(labelPrimaryType)
+            : null;
+          const labeledTargetListId = labeledTargetListName
+            ? mediaModel.lists[labeledTargetListName]?.id
+            : null;
+          const shouldMoveByLabel =
+            hasMediaLabel &&
+            !isProtectedList &&
+            Boolean(labeledTargetListId) &&
+            card.idList !== labeledTargetListId &&
+            (isInboxCard || moveLabeledCardsAcrossBoard);
+          if (shouldMoveByLabel) return 0;
+          if (!hasMediaLabel && (!onlyInbox || isInboxCard)) return 1;
+          if (
+            backfillArtworkAcrossBoard &&
+            hasMediaLabel &&
+            !hasCardCover(card)
+          ) {
+            return 2;
+          }
+          return 3;
+        };
+        const priorityDiff = priority(a) - priority(b);
+        return priorityDiff || a.name.localeCompare(b.name);
+      });
 
     let considered = 0;
     let moved = 0;
@@ -1327,9 +1371,14 @@ export const MediaGroomer = function () {
       let entry: CacheEntry;
       try {
         if (hasMediaLabel) {
-          entry = await entryFromLabels(card, needsArtwork);
+          const shouldFetchArtwork = shouldFetchArtworkForLabeledCard({
+            needsArtwork,
+            shouldMoveByLabel,
+            shouldCorrectManaged,
+          });
+          entry = await entryFromLabels(card, shouldFetchArtwork);
           if (!entry) continue;
-          if (needsArtwork) artworkBackfillAttempts++;
+          if (shouldFetchArtwork) artworkBackfillAttempts++;
         } else {
           entry = await classifyTitle(card.name, cache);
         }
