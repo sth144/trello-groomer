@@ -11,6 +11,7 @@ import {
 import {
   decideCoverColor,
   LabelVector,
+  pickNearestLabel,
 } from "./cover-colors";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
@@ -99,12 +100,16 @@ function cardDoc(card: ICard): string {
   return `${card.name || ""} ${card.desc || ""}`.trim();
 }
 
+function cardHasLabels(card: ICard): boolean {
+  return (card.idLabels || []).length > 0;
+}
+
 async function ensureCardLabels(
   controller: BoardController<ToDoBoardModel>,
   cards: ICard[],
   config: BeautifyConfig
 ): Promise<number> {
-  const unlabeled = cards.filter((c) => (c.idLabels || []).length === 0);
+  const unlabeled = cards.filter((c) => !cardHasLabels(c));
   if (unlabeled.length === 0) return 0;
 
   const fallbackId = await controller.ensureLabel(
@@ -114,10 +119,45 @@ async function ensureCardLabels(
   let added = 0;
   for (const card of unlabeled) {
     await controller.addLabelToCard(card.id, fallbackId);
+    card.idLabels = card.idLabels || [];
     card.idLabels.push(fallbackId);
     added++;
   }
   logger.info(`Beautify: added fallback label to ${added} unlabeled card(s)`);
+  return added;
+}
+
+async function applySemanticLabels(
+  controller: BoardController<ToDoBoardModel>,
+  cards: ICard[],
+  labelVectors: LabelVector[],
+  embedder: Embedder,
+  minScore: number
+): Promise<number> {
+  const unlabeled = cards.filter((c) => c.name && !cardHasLabels(c));
+  if (unlabeled.length === 0 || labelVectors.length === 0) return 0;
+
+  const labelIds = controller.BoardModel.getLabels();
+  const cardVecs = await embedder.embed(unlabeled.map(cardDoc));
+
+  let added = 0;
+  for (let i = 0; i < unlabeled.length; i++) {
+    const card = unlabeled[i];
+    const { label, score } = pickNearestLabel(cardVecs[i], labelVectors);
+    const labelId = label ? labelIds[label.name] : null;
+    if (!label || !labelId || score < minScore) continue;
+
+    await controller.addLabelToCard(card.id, labelId);
+    card.idLabels = card.idLabels || [];
+    card.idLabels.push(labelId);
+    added++;
+    logger.info(
+      `Beautify: added "${label.name}" label to "${card.name}"` +
+        ` (cos=${score.toFixed(2)})`
+    );
+  }
+
+  logger.info(`Beautify: added semantic label to ${added} unlabeled card(s)`);
   return added;
 }
 
@@ -167,7 +207,9 @@ async function applyCoverColors(
           ` (${decision.matchedLabel || "hash"}, cos=${decision.score.toFixed(2)})`
       );
     } catch (e) {
-      logger.info(`Beautify: failed to set cover for "${card.name}": ${String(e)}`);
+      logger.info(
+        `Beautify: failed to set cover for "${card.name}": ${String(e)}`
+      );
     }
   }
   return colored;
@@ -183,14 +225,17 @@ export async function processBeautification(
   }
 
   const cards = controller.BoardModel.getAllCards().filter(Boolean);
-  if (config.ensureLabels) {
-    await ensureCardLabels(controller, cards, config);
-  }
-  if (!config.applyCovers) return;
 
-  const labelNames = Object.keys(controller.BoardModel.getLabels());
+  const labelNames = Object.keys(controller.BoardModel.getLabels()).filter(
+    (name) => name !== config.fallbackLabelName
+  );
   if (labelNames.length === 0) {
-    logger.info("Beautify: no labels on board, skipping cover coloring");
+    if (config.ensureLabels) {
+      await ensureCardLabels(controller, cards, config);
+    }
+    logger.info(
+      "Beautify: no non-fallback labels on board, skipping cover coloring"
+    );
     return;
   }
 
@@ -208,6 +253,20 @@ export async function processBeautification(
     controller.BoardModel.getLabelColors(),
     labelVecs
   );
+  const minScore =
+    config.embedding.minScore ?? DEFAULT_MIN_SCORE[embedder.kind];
+
+  if (config.ensureLabels) {
+    await applySemanticLabels(
+      controller,
+      cards,
+      labelVectors,
+      embedder,
+      minScore
+    );
+    await ensureCardLabels(controller, cards, config);
+  }
+  if (!config.applyCovers) return;
 
   const colored = await applyCoverColors(
     controller,

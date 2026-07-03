@@ -556,7 +556,9 @@ export class BoardController<T extends BoardModel> {
     maxCardCount: number = Infinity,
     intervalMs: number | null = null
   ): Promise<void> {
-    checkFor = checkFor.map((x) => x !== undefined && x.toLowerCase());
+    checkFor = checkFor
+      .filter((x) => x !== undefined && x !== null)
+      .map((x) => x.toLowerCase());
 
     const allLabels = this.boardModel.getLabels();
     if (
@@ -567,13 +569,12 @@ export class BoardController<T extends BoardModel> {
 
       let cardCount: number = 0;
 
-      this.boardModel.getAllCards().forEach(async (card) => {
-        if (card.name === undefined || cardCount > maxCardCount) {
-          return;
-        }
+      for (const card of this.boardModel.getAllCards()) {
+        if (cardCount >= maxCardCount) break;
+        if (card.name === undefined) continue;
 
         const cardNameLowerCase = card.name.toLowerCase();
-        const cardDescLowerCase = card.desc.toLowerCase();
+        const cardDescLowerCase = (card.desc || "").toLowerCase();
         const cardText = `${cardNameLowerCase} ${cardDescLowerCase}`;
 
         if (
@@ -588,17 +589,18 @@ export class BoardController<T extends BoardModel> {
           await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
             value: labelId,
           });
+          card.idLabels = card.idLabels || [];
           card.idLabels.push(labelId);
+          cardCount++;
+          if (intervalMs !== null) {
+            await new Promise<void>((res) => {
+              setTimeout(() => {
+                res();
+              }, intervalMs);
+            });
+          }
         }
-        cardCount++;
-        if (intervalMs !== null) {
-          await new Promise<void>((res, rej) => {
-            setTimeout(() => {
-              res();
-            }, intervalMs);
-          });
-        }
-      });
+      }
     }
   }
 
@@ -678,10 +680,9 @@ export class BoardController<T extends BoardModel> {
     color: string,
     brightness: "light" | "dark" = "dark"
   ): Promise<void> {
-    const cover = JSON.stringify({ color, brightness, size: "normal" });
-    await this.httpClient.asyncPut(
-      `/cards/${cardId}?cover=${encodeURIComponent(cover)}`
-    );
+    await this.httpClient.asyncPut(`/cards/${cardId}`, {
+      cover: { color, brightness, size: "normal" },
+    });
   }
 
   public async updateCardDescription(
@@ -716,6 +717,10 @@ export class BoardController<T extends BoardModel> {
     this.boardModel.Labels = {
       ...this.boardModel.getLabels(),
       [labelName]: label.id,
+    };
+    this.boardModel.LabelColors = {
+      ...this.boardModel.getLabelColors(),
+      [labelName]: label.color || color,
     };
     return label.id;
   }

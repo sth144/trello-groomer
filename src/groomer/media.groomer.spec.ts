@@ -4,7 +4,9 @@ import { join } from "path";
 import {
   loadMediaCache,
   heuristicClassify,
+  mediaCacheEntryIsFresh,
   normalizeTitle,
+  shouldMoveNewlyClassifiedCard,
   typeToLabelName,
   typeToListName,
   upsertMediaDescriptionBlock,
@@ -63,6 +65,52 @@ describe("Media groomer", () => {
       const cache = loadMediaCache(cachePath);
       expect(cache.version).to.equal(6);
       expect(Object.keys(cache.byTitle)).to.deep.equal([]);
+    });
+
+    it("expires low-confidence unknown entries quickly", () => {
+      const staleUnknown = {
+        classification: {
+          type: "unknown" as const,
+          confidence: 0.5,
+          source: "heuristic" as const,
+        },
+        decidedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      const staleMovie = {
+        classification: {
+          type: "movie" as const,
+          confidence: 0.9,
+          source: "omdb" as const,
+        },
+        decidedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      expect(mediaCacheEntryIsFresh(staleUnknown, 3650)).to.equal(false);
+      expect(mediaCacheEntryIsFresh(staleMovie, 3650)).to.equal(true);
+    });
+  });
+
+  describe("movement decisions", () => {
+    it("moves newly classified Inbox cards in the same pass", () => {
+      expect(
+        shouldMoveNewlyClassifiedCard({
+          shouldClassifyUnlabeled: true,
+          isProtectedList: false,
+          isInboxCard: true,
+          moveLabeledCardsAcrossBoard: false,
+        })
+      ).to.equal(true);
+    });
+
+    it("does not move newly classified cards out of protected lists", () => {
+      expect(
+        shouldMoveNewlyClassifiedCard({
+          shouldClassifyUnlabeled: true,
+          isProtectedList: true,
+          isInboxCard: true,
+          moveLabeledCardsAcrossBoard: true,
+        })
+      ).to.equal(false);
     });
   });
 

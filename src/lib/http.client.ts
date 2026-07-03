@@ -59,8 +59,11 @@ export class TrelloHttpClient {
   public async asyncPut(url: string, body: any = null): Promise<any> {
     this.numRequestsSent++;
 
+    const headers: Record<string, string> = {};
     if (body instanceof Object) {
       body = JSON.stringify(body);
+      headers["Accept"] = "application/json";
+      headers["Content-Type"] = "application/json";
     }
 
     const printUrl = url.replace("\n", "").replace("\t", "").replace("\r", "");
@@ -72,6 +75,7 @@ export class TrelloHttpClient {
           method: "PUT",
           uri: this.getLongUrl(url),
           timeout: 60000,
+          headers,
           body,
         },
         (err: Error, response: Response, body: string) => {

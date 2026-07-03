@@ -132,6 +132,7 @@ const MEDIA_GROOMER_ATTACHMENT_PREFIX = "media-groomer:";
 const DESCRIPTION_START = "<!-- media-groomer:start -->";
 const DESCRIPTION_END = "<!-- media-groomer:end -->";
 const EXTERNAL_BUDGET_EXHAUSTED = "External API budget exhausted";
+const LOW_CONFIDENCE_UNKNOWN_CACHE_TTL_DAYS = 1;
 
 export function normalizeTitle(s: string): string {
   return s
@@ -201,10 +202,15 @@ export function loadMediaCache(cachePath: string): CacheFile {
   }
 }
 
-function cacheIsFresh(entry: CacheEntry, ttlDays: number) {
+export function mediaCacheEntryIsFresh(entry: CacheEntry, ttlDays: number) {
   const t = new Date(entry.decidedAt).getTime();
   if (!Number.isFinite(t)) return false;
-  return Date.now() - t <= ttlDays * 24 * 60 * 60 * 1000;
+  const effectiveTtlDays =
+    entry.classification?.type === "unknown" &&
+    entry.classification.confidence < 0.75
+      ? Math.min(ttlDays, LOW_CONFIDENCE_UNKNOWN_CACHE_TTL_DAYS)
+      : ttlDays;
+  return Date.now() - t <= effectiveTtlDays * 24 * 60 * 60 * 1000;
 }
 
 export function typeToListName(type: MediaType): MediaBoardLists | null {
@@ -290,6 +296,19 @@ function isGenericGoogleBooksHit(titleRaw: string, classification: Classificatio
 function uniqueMediaTypes(types: MediaType[]) {
   return types.filter(
     (type, index) => type !== "unknown" && types.indexOf(type) === index
+  );
+}
+
+export function shouldMoveNewlyClassifiedCard(opts: {
+  shouldClassifyUnlabeled: boolean;
+  isProtectedList: boolean;
+  isInboxCard: boolean;
+  moveLabeledCardsAcrossBoard: boolean;
+}) {
+  return (
+    opts.shouldClassifyUnlabeled &&
+    !opts.isProtectedList &&
+    (opts.isInboxCard || opts.moveLabeledCardsAcrossBoard)
   );
 }
 
@@ -869,7 +888,7 @@ export const MediaGroomer = function () {
     const ttlDays = config.runtime?.cacheTtlDays ?? 3650;
     const key = normalizeTitle(title);
     const cached = cache.byTitle[key];
-    if (cached && cacheIsFresh(cached, ttlDays)) {
+    if (cached && mediaCacheEntryIsFresh(cached, ttlDays)) {
       return {
         ...cached,
         classification: {
@@ -1380,7 +1399,14 @@ export const MediaGroomer = function () {
           didEnrich = await enrichCard(card, classification, entry.enrichment || {});
           if (didEnrich) enriched++;
         }
-        const canMoveCard = shouldMoveByLabel || shouldCorrectManaged;
+        const canMoveNewlyClassifiedCard = shouldMoveNewlyClassifiedCard({
+          shouldClassifyUnlabeled,
+          isProtectedList,
+          isInboxCard,
+          moveLabeledCardsAcrossBoard,
+        });
+        const canMoveCard =
+          shouldMoveByLabel || shouldCorrectManaged || canMoveNewlyClassifiedCard;
         let didMove = false;
         if (canMoveCard && card.idList !== targetList.id) {
           await mediaController.moveCardToList(card.id, targetList.id);
