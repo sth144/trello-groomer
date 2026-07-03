@@ -556,7 +556,9 @@ export class BoardController<T extends BoardModel> {
     maxCardCount: number = Infinity,
     intervalMs: number | null = null
   ): Promise<void> {
-    checkFor = checkFor.map((x) => x !== undefined && x.toLowerCase());
+    checkFor = checkFor
+      .filter((x) => x !== undefined && x !== null)
+      .map((x) => x.toLowerCase());
 
     const allLabels = this.boardModel.getLabels();
     if (
@@ -567,13 +569,12 @@ export class BoardController<T extends BoardModel> {
 
       let cardCount: number = 0;
 
-      this.boardModel.getAllCards().forEach(async (card) => {
-        if (card.name === undefined || cardCount > maxCardCount) {
-          return;
-        }
+      for (const card of this.boardModel.getAllCards()) {
+        if (cardCount >= maxCardCount) break;
+        if (card.name === undefined) continue;
 
         const cardNameLowerCase = card.name.toLowerCase();
-        const cardDescLowerCase = card.desc.toLowerCase();
+        const cardDescLowerCase = (card.desc || "").toLowerCase();
         const cardText = `${cardNameLowerCase} ${cardDescLowerCase}`;
 
         if (
@@ -588,17 +589,18 @@ export class BoardController<T extends BoardModel> {
           await this.httpClient.asyncPost(`/cards/${card.id}/idLabels?`, {
             value: labelId,
           });
+          card.idLabels = card.idLabels || [];
           card.idLabels.push(labelId);
+          cardCount++;
+          if (intervalMs !== null) {
+            await new Promise<void>((res) => {
+              setTimeout(() => {
+                res();
+              }, intervalMs);
+            });
+          }
         }
-        cardCount++;
-        if (intervalMs !== null) {
-          await new Promise<void>((res, rej) => {
-            setTimeout(() => {
-              res();
-            }, intervalMs);
-          });
-        }
-      });
+      }
     }
   }
 
@@ -629,6 +631,98 @@ export class BoardController<T extends BoardModel> {
 
   public async deleteCardByID(cardID: string) {
     await this.httpClient.asyncDelete(`/cards/${cardID}`);
+  }
+
+  public async addLabelToCard(cardId: string, labelId: string): Promise<void> {
+    await this.httpClient.asyncPost(`/cards/${cardId}/idLabels`, {
+      value: labelId,
+    });
+  }
+
+  public async removeLabelFromCard(
+    cardId: string,
+    labelId: string
+  ): Promise<void> {
+    await this.httpClient.asyncDelete(`/cards/${cardId}/idLabels/${labelId}`);
+  }
+
+  public async moveCardToList(
+    cardId: string,
+    listId: string,
+    pos: "top" | "bottom" | number = "top"
+  ): Promise<void> {
+    await this.httpClient.asyncPut(
+      `/cards/${cardId}?idList=${encodeURIComponent(
+        listId
+      )}&pos=${encodeURIComponent(pos)}`
+    );
+  }
+
+  public async attachUrlToCard(
+    cardId: string,
+    url: string,
+    name: string,
+    setCover: boolean = false
+  ): Promise<any> {
+    return await this.httpClient.asyncPost(`/cards/${cardId}/attachments`, {
+      url,
+      name,
+      setCover,
+    });
+  }
+
+  /**
+   * set a solid color cover on a card (does not affect cards that already have an
+   * image cover). `color` must be one of Trello's accepted cover colors.
+   */
+  public async setCardCoverColor(
+    cardId: string,
+    color: string,
+    brightness: "light" | "dark" = "dark"
+  ): Promise<void> {
+    await this.httpClient.asyncPut(`/cards/${cardId}`, {
+      cover: { color, brightness, size: "normal" },
+    });
+  }
+
+  public async updateCardDescription(
+    cardId: string,
+    description: string
+  ): Promise<void> {
+    await this.httpClient.asyncPut(
+      `/cards/${cardId}?desc=${encodeURIComponent(description)}`
+    );
+  }
+
+  public async ensureLabel(
+    labelName: string,
+    color: string
+  ): Promise<string> {
+    const existingLabel = this.boardModel.getLabels()[labelName];
+    if (existingLabel) {
+      return existingLabel;
+    }
+
+    const label = await this.httpClient.asyncPost(
+      `/boards/${this.boardModel.id}/labels`,
+      {
+        name: labelName,
+        color,
+      }
+    );
+    if (!label?.id) {
+      throw new Error(`Failed to create Trello label ${labelName}`);
+    }
+
+    this.boardModel.Labels = {
+      ...this.boardModel.getLabels(),
+      [labelName]: label.id,
+    };
+    this.boardModel.LabelColors = {
+      ...this.boardModel.getLabelColors(),
+      [labelName]: label.color || color,
+    };
+    return label.id;
   }
 
   public async autoLinkRelatedCards(ignorePatterns: string[]): Promise<void> {
@@ -1059,7 +1153,8 @@ export class BoardController<T extends BoardModel> {
     /**
      * get all labels on board
      */
-    const allLabels = {};
+    const allLabels: Record<string, string> = {};
+    const allLabelColors: Record<string, string> = {};
     let labelResponse: Array<Record<string, string>> =
       await this.httpClient.asyncGet(`/boards/${this.boardModel.id}/labels`);
     if (typeof labelResponse === "string") {
@@ -1068,7 +1163,7 @@ export class BoardController<T extends BoardModel> {
 
     console.log(`Got labels ${JSON.stringify(labelResponse)}`);
 
-    labelResponse = <any>labelResponse.map((label: Record<string, string>) => {
+    labelResponse.forEach((label: Record<string, string>) => {
       if (
         label.hasOwnProperty("id") &&
         label.hasOwnProperty("name") &&
@@ -1076,11 +1171,13 @@ export class BoardController<T extends BoardModel> {
         label.hasOwnProperty("color") &&
         label.color !== null
       ) {
-        Object.assign(allLabels, { [label.name]: label.id });
+        allLabels[label.name] = label.id;
+        allLabelColors[label.name] = label.color;
       }
     });
 
     this.boardModel.Labels = allLabels;
+    this.boardModel.LabelColors = allLabelColors;
   }
 
   public async addListsToModelIfNameMeetsConditions(

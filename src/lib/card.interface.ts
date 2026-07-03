@@ -11,7 +11,12 @@ export interface ICard {
   idBoard: string;
   pos: number;
   shortUrl: string;
-  attachments: { name: string }[];
+  attachments: { name: string; url?: string }[];
+  cover?: {
+    color?: string;
+    idAttachment?: string;
+    idUploadedBackground?: string | boolean;
+  };
   actions: IAction[];
 }
 

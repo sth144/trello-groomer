@@ -1,0 +1,35 @@
+{
+  "omdb": {
+    "apiKey": ""
+  },
+  "googleBooks": {
+    "apiKey": ""
+  },
+  "tmdb": {
+    "apiKey": ""
+  },
+  "openai": {
+    "apiKey": "",
+    "model": "gpt-4o-mini",
+    "endpoint": "https://api.openai.com/v1/responses"
+  },
+  "runtime": {
+    "maxExternalCallsPerRun": 10,
+    "maxOpenAICallsPerRun": 2,
+    "maxCardsPerRun": 25,
+    "maxArtworkBackfillPerRun": 25,
+    "onlyInbox": true,
+    "cachePath": "./cache/media_classifier_cache.json",
+    "cacheTtlDays": 3650,
+    "minConfidenceToAct": 0.75,
+    "applyLabels": true,
+    "applyArtwork": true,
+    "applyStreamingProviders": true,
+    "backfillArtworkAcrossBoard": true,
+    "moveLabeledCardsAcrossBoard": true,
+    "updateUsageCard": true,
+    "usageCardName": "Media Groomer Usage",
+    "streamingRegion": "US",
+    "minDelayMsBetweenExternalCalls": 250
+  }
+}

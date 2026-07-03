@@ -17,8 +17,15 @@ export class BoardModel {
   protected labels: {
     [name: string]: string;
   } = {};
+  /** label colors indexed by label name (parallel to `labels`) */
+  protected labelColors: {
+    [name: string]: string;
+  } = {};
   public set Labels(obj: { [name: string]: string }) {
     this.labels = obj;
+  }
+  public set LabelColors(obj: { [name: string]: string }) {
+    this.labelColors = obj;
   }
   getAllCards(): ICard[] {
     let allCards: ICard[] = [];
@@ -104,6 +111,9 @@ export class BoardModel {
   }
   getLabels() {
     return this.labels;
+  }
+  getLabelColors() {
+    return this.labelColors;
   }
   addList(listName: string, list: List) {
     Object.assign(this.lists, {

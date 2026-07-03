@@ -6,18 +6,19 @@ COPY . .
 COPY requirements.txt .
 
 RUN apt-get update && apt-get install -y \
-    apache2 \
-    cmake \
-    libblas-dev \
-    libopenblas-dev \
-    liblapack-dev \
-    gfortran \
-    curl \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+  apache2 \
+  cmake \
+  libblas-dev \
+  libopenblas-dev \
+  liblapack-dev \
+  gfortran \
+  curl \
+  gnupg \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip setuptools wheel numpy
 RUN pip install -r requirements.txt
+RUN pip3 install audible
 
 # Node.js setup
 RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \

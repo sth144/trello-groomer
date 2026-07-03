@@ -16,6 +16,7 @@ import { processHomelabListItems } from "./todo/homelab-tickets";
 import { processSprintListItems } from "./todo/sprint-items";
 import { processTaskAggregatorItems } from "./todo/task-aggregator";
 import { processResearchTasks } from "./todo/research-tasks"; // Add this import
+import { processBeautification } from "./todo/beautify";
 import { DateRegexes, getMonthNumFromAbbrev } from "../lib/date.utils";
 import { parseAutoDueConfig } from "../lib/parse.utils";
 import { join } from "path";
@@ -213,20 +214,16 @@ export const ToDoGroomer = function () {
     /** auto-label cards based on titles */
     logger.info("Adding labels according to keywords in card titles");
 
-    const addedLabels = new Promise(async (res) => {
-      /** work keyword conflicts with a lot of irrelevant card titles */
-      const allLabels = todoController.AllLabelNames.filter(
-        (x) => x !== "Work"
+    /** work keyword conflicts with a lot of irrelevant card titles */
+    const allLabels = todoController.AllLabelNames.filter((x) => x !== "Work");
+    for (const labelName of allLabels) {
+      await todoController.addLabelToCardsIfTextContains(
+        labelName,
+        [labelName],
+        5,
+        1000
       );
-      for (let labelName of allLabels) {
-        await todoController.addLabelToCardsIfTextContains(
-          labelName,
-          [labelName],
-          5,
-          1000
-        );
-      }
-    });
+    }
 
     const autoLabelConfigPath = join(
       process.cwd(),
@@ -235,17 +232,16 @@ export const ToDoGroomer = function () {
     if (existsSync(autoLabelConfigPath)) {
       const autoLabelConfig = require(autoLabelConfigPath);
 
-      Object.keys(autoLabelConfig)
-        .sort(() => Math.random() - 0.5)
-        .slice()
-        .forEach(async (labelName) => {
-          await todoController.addLabelToCardsIfTextContains(
-            labelName,
-            autoLabelConfig[labelName],
-            5,
-            1000
-          );
-        });
+      for (const labelName of Object.keys(autoLabelConfig).sort(
+        () => Math.random() - 0.5
+      )) {
+        await todoController.addLabelToCardsIfTextContains(
+          labelName,
+          autoLabelConfig[labelName],
+          5,
+          1000
+        );
+      }
     }
 
     logger.info("Updating task dependencies");
@@ -456,6 +452,9 @@ export const ToDoGroomer = function () {
     await todoController.removeDueDateFromCardsInList(
       todoModel.lists.backburner.id
     );
+
+    logger.info("Beautifying board (ensuring labels, applying cover colors)");
+    await processBeautification(todoController);
 
     logger.info(
       "dump JSON data for card labels to train machine learning model"
