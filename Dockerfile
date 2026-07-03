@@ -24,14 +24,13 @@ RUN pip3 install audible
 RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
   && apt-get update && apt-get install -y nodejs \
   && npm config set strict-ssl false \
-  && npm config set registry http://registry.npmjs.org/ \
-  && npm install -g typescript
+  && npm config set registry http://registry.npmjs.org/
 
 # ---------- Stage 2: Build ----------
 FROM base AS build
 
 RUN npm install
-RUN tsc -p .
+RUN npx tsc -p .
 
 # ---------- Stage 3: Test ----------
 FROM build AS test
