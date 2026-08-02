@@ -294,6 +294,103 @@ spec:
         # - name: trello-groomer-ssl
         #   hostPath:
         #     path: /etc/ssl/certs/
+---
+# Read/write API over the snapshots the groomers leave in the shared cache volume, plus the Angular
+# checklist client. Runs as its own deployment so a fault here cannot disturb a grooming run.
+#
+# It mounts the same claims as the groomers, so the local PVs' nodeAffinity schedules it onto the
+# same node (pc2) automatically — no nodeSelector needed here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trello-groomer-api
+  labels:
+    app: trello-groomer-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trello-groomer-api
+  template:
+    metadata:
+      labels:
+        app: trello-groomer-api
+        name: trello-groomer-api
+    spec:
+      containers:
+        - name: trello-groomer-api
+          image: sthinds/trello-groomer:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4500
+          volumeMounts:
+            - name: trello-groomer-config-volume
+              mountPath: /usr/src/app/config
+            - name: trello-groomer-cache-volume
+              mountPath: /usr/src/app/cache
+            - name: trello-groomer-log-volume
+              mountPath: /usr/src/app/log
+            - name: trello-groomer-timezone
+              mountPath: /etc/localtime
+          env:
+            - name: WHICH_GROOMER
+              value: "start-api"
+            - name: PORT
+              value: "4500"
+            # board whose snapshot backs /api/views
+            - name: VIEWS_BOARD
+              value: "todo"
+          # Parsing the ToDo snapshot costs ~40Mi of heap on its own, and reads across several
+          # boards keep one parsed copy of each. The groomers' 100Mi would OOM this immediately.
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+      volumes:
+        - name: trello-groomer-config-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-config-claim
+        - name: trello-groomer-cache-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-cache-claim
+        - name: trello-groomer-log-volume
+          persistentVolumeClaim:
+            claimName: trello-groomer-log-claim
+        - name: trello-groomer-timezone
+          hostPath:
+            path: /usr/share/zoneinfo/America/Chicago
+---
+# NodePort keeps this reachable at http://<node-ip>:30450 without an ingress controller. Swap to
+# ClusterIP and front it with an Ingress if you'd rather have a hostname.
+apiVersion: v1
+kind: Service
+metadata:
+  name: trello-groomer-api
+  labels:
+    app: trello-groomer-api
+spec:
+  type: NodePort
+  selector:
+    app: trello-groomer-api
+  ports:
+    - name: http
+      port: 4500
+      targetPort: http
+      nodePort: 30450
 # TODO: get this working?
 # ---
 # apiVersion: batch/v1beta1

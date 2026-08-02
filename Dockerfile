@@ -37,10 +37,29 @@ FROM build AS test
 
 RUN npm run test
 
-# ---------- Stage 4: Final Deploy Image ----------
+# ---------- Stage 4: Client build ----------
+# The Angular client keeps its own package.json and toolchain. Building it in a separate stage means
+# only the emitted bundle reaches the deploy image, not the ~300MB of Angular dependencies.
+#
+# Pinned to $BUILDPLATFORM on purpose. CI builds this image for arm/v7, arm64 and amd64 under QEMU
+# (see .travis.yml), and the Angular toolchain has no business running emulated three times to emit
+# the same platform-independent JavaScript. This also decouples the client from the base image's
+# Node 18, which only barely satisfies Angular 19's engine requirement.
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS client-build
+
+WORKDIR /client
+# dependencies first, so editing client source does not invalidate the install layer
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+COPY client/ ./
+RUN npm run build
+
+# ---------- Stage 5: Final Deploy Image ----------
 FROM base AS deploy
 
 COPY --from=build /usr/src/app /usr/src/app
+# the API serves this directory when it exists; without it the API still runs, just headless
+COPY --from=client-build /client/dist/client/browser /usr/src/app/client/dist/client/browser
 
 EXPOSE 4500
 ARG WHICH_GROOMER

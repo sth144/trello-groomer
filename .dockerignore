@@ -10,3 +10,8 @@ log
 
 node_modules
 .env
+
+# Docker only matches bare patterns at the context root, so the client's own build artifacts
+# need naming explicitly. Without these the build context includes ~300MB of Angular deps.
+client/node_modules
+client/dist
