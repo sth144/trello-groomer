@@ -132,6 +132,20 @@ const MEDIA_GROOMER_ATTACHMENT_PREFIX = "media-groomer:";
 const DESCRIPTION_START = "<!-- media-groomer:start -->";
 const DESCRIPTION_END = "<!-- media-groomer:end -->";
 const EXTERNAL_BUDGET_EXHAUSTED = "External API budget exhausted";
+const INVALID_API_KEY_PREFIX = "INVALID_API_KEY:";
+
+/** raised by a provider lookup when the API rejects the credentials */
+function invalidKeyError(provider: string): Error {
+  return new Error(`${INVALID_API_KEY_PREFIX}${provider}`);
+}
+
+/** returns the provider name if the error signals a bad API key, else null */
+function invalidKeyProvider(e: unknown): string | null {
+  const s = String(e);
+  const idx = s.indexOf(INVALID_API_KEY_PREFIX);
+  if (idx === -1) return null;
+  return s.slice(idx + INVALID_API_KEY_PREFIX.length).trim().split(/\s/)[0];
+}
 const LOW_CONFIDENCE_UNKNOWN_CACHE_TTL_DAYS = 1;
 
 export function normalizeTitle(s: string): string {
@@ -509,6 +523,7 @@ async function tmdbLookup(
     { method: "GET", headers: tmdbHeaders(config) },
     { maxRetries: 3, baseDelayMs: 250, jitterMs: 250 }
   );
+  if (res.status === 401) throw invalidKeyError("tmdb");
   if (!res.ok) return null;
   const data = await res.json().catch((): any => null);
   const results = Array.isArray(data?.results) ? data.results : [];
@@ -570,7 +585,11 @@ async function omdbLookup(titleRaw: string, apiKey: string): Promise<Classificat
     { method: "GET" },
     { maxRetries: 3, baseDelayMs: 250, jitterMs: 250 }
   );
+  if (res.status === 401) throw invalidKeyError("omdb");
   const data = await res.json().catch((): any => null);
+  if (data && data.Response === "False" && /api key/i.test(String(data.Error || ""))) {
+    throw invalidKeyError("omdb");
+  }
   if (!data || data.Response !== "True") return null;
 
   const omdbType = String(data.Type || "").toLowerCase();
@@ -850,6 +869,8 @@ export const MediaGroomer = function () {
   let initialExternalCallBudget = 10;
   let initialOpenAICallBudget = 2;
   let lastExternalCallAt = 0;
+  /** providers that returned an auth error this run; skipped to avoid wasting budget */
+  const disabledProviders = new Set<string>();
   const runUsage: RunUsage = {
     openaiCalls: 0,
     openaiInputTokens: 0,
@@ -896,6 +917,25 @@ export const MediaGroomer = function () {
       .sort((a, b) => b.confidence - a.confidence)[0];
   }
 
+  /** true if the named provider still has a key and has not been disabled this run */
+  function providerAvailable(provider: string, hasKey: unknown): boolean {
+    return Boolean(hasKey) && !disabledProviders.has(provider);
+  }
+
+  /**
+   * shared handler for provider lookup failures. Rethrows budget exhaustion,
+   * disables a provider for the rest of the run on an auth error, otherwise logs.
+   */
+  function handleProviderError(e: unknown, provider: string, title: string) {
+    if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
+    if (invalidKeyProvider(e) === provider) {
+      disabledProviders.add(provider);
+      logger.info(`${provider} API key rejected; disabling ${provider} for this run`);
+      return;
+    }
+    logger.info(`${provider} skipped/failed for "${title}": ${String(e)}`);
+  }
+
   async function classifyTitle(title: string, cache: CacheFile): Promise<CacheEntry> {
     const ttlDays = config.runtime?.cacheTtlDays ?? 3650;
     const key = normalizeTitle(title);
@@ -915,25 +955,23 @@ export const MediaGroomer = function () {
     const tried: Classification[] = [];
     const bookSignals: Classification[] = [];
 
-    if (config.tmdb?.apiKey) {
+    if (providerAvailable("tmdb", config.tmdb?.apiKey)) {
       try {
         await spendExternalCallOrThrow();
         const tmdb = await tmdbLookup(title, typeHint, config);
         if (tmdb) tried.push(tmdb);
       } catch (e) {
-        if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
-        logger.info(`TMDb skipped/failed for "${title}": ${String(e)}`);
+        handleProviderError(e, "tmdb", title);
       }
     }
 
-    if (config.omdb?.apiKey) {
+    if (providerAvailable("omdb", config.omdb?.apiKey)) {
       try {
         await spendExternalCallOrThrow();
         const omdb = await omdbLookup(title, config.omdb.apiKey);
         if (omdb) tried.push(omdb);
       } catch (e) {
-        if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
-        logger.info(`OMDb skipped/failed for "${title}": ${String(e)}`);
+        handleProviderError(e, "omdb", title);
       }
     }
 
@@ -1077,7 +1115,14 @@ export const MediaGroomer = function () {
       labelTypes,
       decidedAt: new Date().toISOString(),
     };
-    cache.byTitle[key] = entry;
+    /**
+     * Only persist confident results. An "unknown" is usually a transient miss
+     * (provider down, bad key, rate limit); caching it with the long TTL would
+     * poison the title for years. Leaving it uncached lets the next run retry.
+     */
+    if (classification.type !== "unknown") {
+      cache.byTitle[key] = entry;
+    }
     return entry;
   }
 
@@ -1095,6 +1140,39 @@ export const MediaGroomer = function () {
     );
   }
 
+  /** try each movie/TV provider independently so one bad key doesn't skip the rest */
+  async function lookupMovieOrTvArtwork(
+    title: string,
+    type: MediaType
+  ): Promise<Classification | null> {
+    if (providerAvailable("tmdb", config.tmdb?.apiKey)) {
+      try {
+        await spendExternalCallOrThrow();
+        const tmdb = await tmdbLookup(title, type, config);
+        if (tmdb) return tmdb;
+      } catch (e) {
+        handleProviderError(e, "tmdb", title);
+      }
+    }
+    if (providerAvailable("omdb", config.omdb?.apiKey)) {
+      try {
+        await spendExternalCallOrThrow();
+        const omdb = await omdbLookup(title, config.omdb.apiKey);
+        if (omdb) return omdb;
+      } catch (e) {
+        handleProviderError(e, "omdb", title);
+      }
+    }
+    try {
+      await spendExternalCallOrThrow();
+      const itunes = await itunesLookup(title, type);
+      if (itunes) return itunes;
+    } catch (e) {
+      handleProviderError(e, "itunes", title);
+    }
+    return null;
+  }
+
   async function lookupKnownType(
     title: string,
     type: MediaType
@@ -1106,40 +1184,19 @@ export const MediaGroomer = function () {
           const gb = await googleBooksLookup(title, config.googleBooks?.apiKey);
           return gb?.classification || null;
         } catch (e) {
-          if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
-          logger.info(`Book artwork lookup skipped/failed for "${title}": ${String(e)}`);
+          handleProviderError(e, "google_books", title);
           return null;
         }
       }
       case "movie":
-      case "tv": {
-        try {
-          if (config.tmdb?.apiKey) {
-            await spendExternalCallOrThrow();
-            const tmdb = await tmdbLookup(title, type, config);
-            if (tmdb) return tmdb;
-          }
-          if (config.omdb?.apiKey) {
-            await spendExternalCallOrThrow();
-            const omdb = await omdbLookup(title, config.omdb.apiKey);
-            if (omdb) return omdb;
-          }
-          await spendExternalCallOrThrow();
-          const itunes = await itunesLookup(title, type);
-          if (itunes) return itunes;
-        } catch (e) {
-          if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
-          logger.info(`Movie/TV artwork lookup skipped/failed for "${title}": ${String(e)}`);
-        }
-        return null;
-      }
+      case "tv":
+        return await lookupMovieOrTvArtwork(title, type);
       case "music": {
         try {
           await spendExternalCallOrThrow();
           return await musicBrainzLookup(title);
         } catch (e) {
-          if (String(e).includes(EXTERNAL_BUDGET_EXHAUSTED)) throw e;
-          logger.info(`Music artwork lookup skipped/failed for "${title}": ${String(e)}`);
+          handleProviderError(e, "musicbrainz", title);
           return null;
         }
       }
@@ -1367,18 +1424,28 @@ export const MediaGroomer = function () {
         continue;
       }
 
-      considered++;
+      /**
+       * Only classification and artwork lookups spend the external-API budget, so
+       * only those count against maxCardsPerRun. Pure label-moves are cheap and
+       * must not starve the expensive work (otherwise a backlog of misplaced cards
+       * consumes the whole run before any Inbox card is classified or covered).
+       */
+      const willFetchArtwork =
+        hasMediaLabel &&
+        shouldFetchArtworkForLabeledCard({
+          needsArtwork,
+          shouldMoveByLabel,
+          shouldCorrectManaged,
+        });
+      const doesExternalWork = shouldClassifyUnlabeled || willFetchArtwork;
+      if (doesExternalWork) considered++;
+
       let entry: CacheEntry;
       try {
         if (hasMediaLabel) {
-          const shouldFetchArtwork = shouldFetchArtworkForLabeledCard({
-            needsArtwork,
-            shouldMoveByLabel,
-            shouldCorrectManaged,
-          });
-          entry = await entryFromLabels(card, shouldFetchArtwork);
+          entry = await entryFromLabels(card, willFetchArtwork);
           if (!entry) continue;
-          if (shouldFetchArtwork) artworkBackfillAttempts++;
+          if (willFetchArtwork) artworkBackfillAttempts++;
         } else {
           entry = await classifyTitle(card.name, cache);
         }
@@ -1530,6 +1597,9 @@ export const MediaGroomer = function () {
     }
 
     await classifyAndMoveUnlabeledCards();
+
+    /** cache the board model so the read API can serve the media board too */
+    mediaController.dump("media");
   };
 
   return {
