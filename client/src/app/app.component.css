@@ -1,0 +1,278 @@
+/* Each list gets one assigned hue, spent only on its rule, gauge and check — everything else
+   stays monochrome so the columns are told apart at a glance without the page turning into
+   confetti. */
+:host {
+  --sprint: #f2a13b;
+  --groceries: #4fbe84;
+  --research: #7aa7ff;
+  --accent: var(--muted);
+
+  display: block;
+  max-width: 84rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2rem) 4rem;
+}
+
+/* ---------------------------------------------------------------- masthead */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.tally {
+  font-family: var(--mono);
+  font-size: clamp(2.75rem, 9vw, 4.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tally__unit {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.masthead__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.meta__line {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.meta__line--quiet {
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.action {
+  padding: 0.35rem 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.action:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.action:disabled {
+  color: var(--muted);
+  cursor: progress;
+}
+
+/* ---------------------------------------------------------------- notices */
+
+.notice {
+  margin: 1.5rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.notice--error {
+  color: var(--warn);
+}
+
+/* ---------------------------------------------------------------- board */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.25rem);
+  margin-top: 2rem;
+}
+
+.column {
+  border-top: 3px solid var(--accent);
+  padding-top: 1rem;
+}
+
+.column[data-list='sprint'] {
+  --accent: var(--sprint);
+}
+.column[data-list='groceries'] {
+  --accent: var(--groceries);
+}
+.column[data-list='research'] {
+  --accent: var(--research);
+}
+
+.column__head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.column__sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- checklist */
+
+.checklist {
+  margin-top: 1.5rem;
+}
+
+.checklist__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.checklist__head h3 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.count {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.gauge {
+  height: 2px;
+  margin-top: 0.5rem;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.gauge__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+
+/* ---------------------------------------------------------------- items */
+
+.items {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  border-bottom: 1px solid var(--rule);
+}
+
+.item label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.15rem;
+  cursor: pointer;
+}
+
+.item input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.item input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.item__name {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
+}
+
+/* struck through the instant it is ticked; the item only drops to the bottom of the list once
+   Trello confirms, so the move itself is the receipt */
+.item--done .item__name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--muted);
+  opacity: 0.65;
+}
+
+.item--pending label {
+  cursor: progress;
+}
+
+.item--pending {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.empty {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gauge__fill,
+  .item__name {
+    transition: none;
+  }
+}

@@ -1,0 +1,112 @@
+<header class="masthead">
+  <div class="masthead__identity">
+    <p class="eyebrow">Standing lists</p>
+    <h1>
+      <span class="tally">{{ remaining() }}</span>
+      <span class="tally__unit">left</span>
+    </h1>
+  </div>
+
+  <div class="masthead__meta">
+    @if (oldestSnapshotSeconds() !== null) {
+      <p class="meta__line">
+        Snapshot {{ freshness(oldestSnapshotSeconds()) }}
+      </p>
+    }
+    <p class="meta__line meta__line--quiet">Ticks go straight to Trello</p>
+    <div class="actions">
+      <button type="button" class="action" (click)="refresh()">Refresh</button>
+      <button
+        type="button"
+        class="action"
+        [disabled]="pulling()"
+        (click)="pullFromTrello()"
+      >
+        {{ pulling() ? 'Pulling…' : 'Pull from Trello' }}
+      </button>
+    </div>
+  </div>
+</header>
+
+@if (error()) {
+  <p class="notice notice--error" role="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="notice">Reading the latest snapshot…</p>
+} @else {
+  <main class="board">
+    @for (view of views(); track view.key) {
+      <section class="column" [attr.data-list]="view.key">
+        <header class="column__head">
+          <h2>{{ view.label }}</h2>
+          @if (view.card) {
+            <p class="column__sub">
+              {{ view.card.listName }}
+              @if (dueLabel(view.card.due)) {
+                · due {{ dueLabel(view.card.due) }}
+              }
+            </p>
+          }
+        </header>
+
+        @if (!view.card) {
+          <p class="empty">
+            No current card. The groomer creates one on its next run.
+          </p>
+        } @else if (!view.checklists.length) {
+          <p class="empty">This card has no checklists.</p>
+        } @else {
+          @for (checklist of view.checklists; track checklist.id) {
+            <article class="checklist">
+              <div class="checklist__head">
+                <h3>{{ checklist.name }}</h3>
+                <p class="count">
+                  {{ completeCount(checklist) }}/{{ checklist.checkItems.length }}
+                </p>
+              </div>
+
+              <div
+                class="gauge"
+                role="progressbar"
+                [attr.aria-valuenow]="progressPercent(checklist)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="checklist.name + ' progress'"
+              >
+                <span
+                  class="gauge__fill"
+                  [style.width.%]="progressPercent(checklist)"
+                ></span>
+              </div>
+
+              @if (!checklist.checkItems.length) {
+                <p class="empty">Nothing left here.</p>
+              } @else {
+                <ul class="items">
+                  @for (item of orderedItems(checklist); track item.id) {
+                    <li
+                      class="item"
+                      [class.item--done]="stateOf(item) === 'complete'"
+                      [class.item--pending]="isPending(item)"
+                    >
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="stateOf(item) === 'complete'"
+                          [disabled]="isPending(item)"
+                          (change)="toggle(checklist.cardId, item)"
+                        />
+                        <span class="item__name">{{ item.name }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        }
+      </section>
+    }
+  </main>
+}
