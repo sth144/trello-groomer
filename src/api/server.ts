@@ -8,6 +8,7 @@ import { buildAllViews, buildView } from "./views";
 import { getCardQueryByKey } from "../lib/card.queries";
 import { openApiDocument } from "./openapi";
 import { BoardRefreshError, BoardRefresher } from "./refresh";
+import { AuthConfig, createAuth } from "./auth";
 
 /*************************************************************************************************
  * Express app exposing the groomer's cached board state, plus write-through endpoints for check    *
@@ -41,10 +42,18 @@ export interface ApiServerOptions {
   secrets: { key: string; token: string };
   /** the board whose snapshot backs /api/views */
   viewsBoard?: string;
+  /**
+   * Trello OAuth settings. Omit only for local development against a board you do not mind
+   *  exposing — without it nothing is gated.
+   */
+  auth?: AuthConfig;
 }
 
 const DEFAULT_CARD_LIMIT = 200;
 const MAX_CARD_LIMIT = 2000;
+
+/** `ng serve` during development; deployed builds are served same-origin by this process */
+const DEV_CLIENT_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200"];
 
 export function createApiServer(options: ApiServerOptions) {
   const cacheDir = options.cacheDir || join(process.cwd(), "cache");
@@ -58,19 +67,50 @@ export function createApiServer(options: ApiServerOptions) {
   const startedAt = Date.now();
 
   const app = express();
+  /**
+   * required for two things behind the ingress: passport resolving the OAuth callback against the
+   *  forwarded https origin, and the session cookie's Secure handling. Without it a remote HTTPS
+   *  login is handed an http:// callback URL and Trello returns the user to the wrong scheme.
+   */
+  app.set("trust proxy", true);
   app.use(express.json());
 
-  /** the client may be served from `ng serve` during development */
+  /**
+   * The client is same-origin in every deployed configuration, so credentials are only allowed back
+   *  to an explicit development origin. A wildcard origin cannot carry cookies at all, and echoing
+   *  arbitrary origins would let any page drive this API with the user's session.
+   */
   app.use((req: ApiRequest, res: ApiResponse, next: () => void) => {
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-    res.set("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+    const origin = (req as any).headers.origin;
+    if (origin && DEV_CLIENT_ORIGINS.indexOf(origin) !== -1) {
+      res.set("Access-Control-Allow-Origin", origin);
+      res.set("Access-Control-Allow-Credentials", "true");
+      res.set("Vary", "Origin");
+      res.set("Access-Control-Allow-Headers", "Content-Type,X-API-Key");
+      res.set("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+    }
     if (req.method === "OPTIONS") {
       res.sendStatus(204);
       return;
     }
     next();
   });
+
+  if (options.auth) {
+    const auth = createAuth(options.auth, options.secrets);
+    for (const layer of auth.middleware) {
+      app.use(layer);
+    }
+    auth.mountRoutes(app);
+    /** mounted after the /auth routes so the login flow itself is reachable */
+    app.use(auth.requireAuth);
+    logger.info("Trello OAuth enabled — the client and API require a session");
+  } else {
+    logger.error(
+      "AUTH DISABLED: no auth config supplied, every endpoint is open to anyone " +
+        "who can reach this port"
+    );
+  }
 
   /**
    * resolves a snapshot, answering 503 rather than 500 when a groomer has simply not run yet.
@@ -117,6 +157,14 @@ export function createApiServer(options: ApiServerOptions) {
       trelloRequests: relay.numRequests,
       overlayEntries: overlay.size,
       boards: store.getAvailableBoards(),
+    });
+  });
+
+  app.get("/api/me", (req: ApiRequest, res: ApiResponse) => {
+    const user = (req as any).session && (req as any).session.user;
+    res.json({
+      authEnabled: options.auth !== undefined,
+      user: user || null,
     });
   });
 
@@ -329,8 +377,8 @@ export function createApiServer(options: ApiServerOptions) {
   if (existsSync(clientDir)) {
     logger.info(`Serving client from ${clientDir}`);
     app.use(express.static(clientDir));
-    /** SPA fallback, but never swallow unmatched /api routes */
-    app.get(/^\/(?!api\/).*/, (_req: ApiRequest, res: any) => {
+    /** SPA fallback, but never swallow unmatched /api or /auth routes */
+    app.get(/^\/(?!api\/|auth\/).*/, (_req: ApiRequest, res: any) => {
       res.sendFile(join(clientDir, "index.html"));
     });
   } else {

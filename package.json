@@ -21,8 +21,11 @@
   "license": "ISC",
   "dependencies": {
     "@types/sinon": "^17.0.4",
+    "cookie-session": "^2.1.1",
     "cron": "^1.8.2",
     "express": "^4.17.1",
+    "passport": "^0.7.0",
+    "passport-trello": "^1.1.0",
     "request": "^2.88.0",
     "rxjs": "^6.5.3",
     "sinon": "^20.0.0",

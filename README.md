@@ -44,6 +44,42 @@ ticked box does not spring back on the next poll.
 The client (`client/`) is a standalone Angular app with its own `package.json`, kept separate so its
 toolchain does not collide with this project's TypeScript and RxJS versions.
 
+### Authentication
+
+The client and the whole API sit behind Trello OAuth. Only the Trello account that owns the server
+token in `config/key.json` can sign in — the allowlist is resolved from Trello at first login rather
+than hardcoded, so revoking the token revokes access.
+
+Trello is the identity provider rather than Google for a practical reason as well as a tidy one: its
+OAuth takes the return URL at request time instead of pre-registering one, and it accepts plain HTTP
+and bare IPs. Google rejects both, so Google login would require a public HTTPS hostname before it
+could work at all.
+
+Create `config/oauth.json` from `config/templates/oauth.template.json`:
+
+```bash
+cp config/templates/oauth.template.json config/oauth.json
+# consumerSecret: the *Secret* from https://trello.com/app-key (not the server token)
+# sessionSecret: openssl rand -hex 32
+```
+
+**The API refuses to start without it.** That is deliberate — a deployment that silently served an
+open API would be worse than a pod reporting NotReady. For local development only,
+`ALLOW_UNAUTHENTICATED=true` skips it. Secrets may also come from `TRELLO_CONSUMER_SECRET` and
+`SESSION_SECRET` if you would rather use a Kubernetes Secret than the config volume.
+
+Notes:
+
+- `/api/health` is the one ungated endpoint, because the readiness and liveness probes hit it.
+- Non-browser clients (cron, scripts) can set an `apiKey` in the config and send it as `X-API-Key`
+  or `Authorization: Bearer`. Unset by default.
+- The same deployment works on the LAN over HTTP and remotely over HTTPS. The callback is a relative
+  path and the app sets `trust proxy`, so it resolves against whichever origin was used, following
+  `X-Forwarded-Proto` / `X-Forwarded-Host` through the ingress. Cookies are per-origin, so signing in
+  on the LAN and remotely are separate sessions.
+- Leave `secureCookie` false while any origin is plain HTTP; a Secure cookie is never sent over HTTP,
+  so enabling it breaks LAN access. Turn it on once everything is HTTPS.
+
 ### Deploying the API
 
 The image builds the client in its own stage and copies only the emitted bundle into the deploy

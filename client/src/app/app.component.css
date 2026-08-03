@@ -77,6 +77,16 @@ h1 {
   color: var(--muted);
 }
 
+.signout {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signout:hover {
+  color: var(--ink);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

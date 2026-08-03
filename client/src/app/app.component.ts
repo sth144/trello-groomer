@@ -2,11 +2,13 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import {
   CheckItemState,
   ChecklistsService,
+  Identity,
   View,
   ViewCheckItem,
 } from './checklists.service';
 
 const REFRESH_MS = 60_000;
+const LOGIN_URL = '/auth/trello';
 
 @Component({
   selector: 'app-root',
@@ -43,10 +45,16 @@ export class AppComponent implements OnDestroy {
     return ages.length ? Math.max(...ages) : null;
   });
 
+  identity = signal<Identity | null>(null);
+
   private timer = setInterval(() => this.refresh(), REFRESH_MS);
 
   constructor() {
     this.refresh();
+    this.api.getIdentity().subscribe({
+      next: (identity) => this.identity.set(identity),
+      error: () => this.identity.set(null),
+    });
   }
 
   ngOnDestroy(): void {

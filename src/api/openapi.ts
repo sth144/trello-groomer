@@ -86,9 +86,37 @@ export const openApiDocument = {
       "made, so responses are fast but up to one groom cycle stale — every payload carries " +
       "`capturedAt` and `ageSeconds` so callers can judge for themselves.\n\n" +
       "**Writes** go straight to Trello and are then replayed on top of subsequent snapshot reads " +
-      "until a newer snapshot absorbs them, so a toggle is visible immediately.",
+      "until a newer snapshot absorbs them, so a toggle is visible immediately.\n\n" +
+      "**Auth**: everything here except `/api/health` requires a session from signing in with " +
+      "Trello at `/auth/trello`, and only the Trello account that owns the server token is let in. " +
+      "Browser requests without a session are redirected to the login; anything else gets a 401.",
   },
   servers: [{ url: "/", description: "this server" }],
+  components: {
+    securitySchemes: {
+      trelloSession: {
+        type: "apiKey",
+        in: "cookie",
+        name: "tg.sid",
+        description:
+          "Session cookie issued after signing in with Trello at `/auth/trello`. Browsers get " +
+          "this automatically; Swagger UI on this page is already carrying it if you can read " +
+          "this. Only the Trello account that owns the server token may sign in.",
+      },
+      apiKey: {
+        type: "apiKey",
+        in: "header",
+        name: "X-API-Key",
+        description:
+          "Shared key for non-browser clients, configured as `apiKey` in config/oauth.json. " +
+          "Also accepted as `Authorization: Bearer <key>`. Unset by default.",
+      },
+    },
+  },
+  security: [
+    { trelloSession: [] as string[] },
+    { apiKey: [] as string[] },
+  ],
   tags: [
     { name: "views", description: "Resolved Sprint / Groceries / Research cards" },
     { name: "boards", description: "Raw cached board data" },
@@ -96,10 +124,45 @@ export const openApiDocument = {
     { name: "meta", description: "Health and diagnostics" },
   ],
   paths: {
+    "/api/me": {
+      get: {
+        tags: ["meta"],
+        summary: "The signed-in Trello account",
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    authEnabled: { type: "boolean" },
+                    user: {
+                      nullable: true,
+                      type: "object",
+                      properties: {
+                        id: { type: "string", description: "Trello member id" },
+                        username: { type: "string" },
+                        displayName: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/health": {
       get: {
         tags: ["meta"],
         summary: "Liveness plus snapshot freshness per board",
+        description:
+          "The only endpoint reachable without signing in — the kubernetes readiness and liveness " +
+          "probes depend on it, and gating it would restart-loop the pod.",
+        /** empty overrides the document-level requirement: this endpoint needs no session */
+        security: [] as unknown[],
         responses: {
           "200": {
             description: "OK",

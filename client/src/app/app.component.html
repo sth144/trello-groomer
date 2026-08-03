@@ -14,6 +14,12 @@
       </p>
     }
     <p class="meta__line meta__line--quiet">Ticks go straight to Trello</p>
+    @if (identity()?.user) {
+      <p class="meta__line meta__line--quiet">
+        {{ identity()!.user!.username || identity()!.user!.displayName }} ·
+        <a class="signout" href="/auth/logout">Sign out</a>
+      </p>
+    }
     <div class="actions">
       <button type="button" class="action" (click)="refresh()">Refresh</button>
       <button

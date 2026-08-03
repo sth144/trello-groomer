@@ -37,12 +37,21 @@ export interface View {
   ageSeconds: number;
 }
 
+export interface Identity {
+  authEnabled: boolean;
+  user: { id: string; username: string; displayName: string } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChecklistsService {
   private http = inject(HttpClient);
 
   getViews(): Observable<View[]> {
     return this.http.get<View[]>('/api/views');
+  }
+
+  getIdentity(): Observable<Identity> {
+    return this.http.get<Identity>('/api/me');
   }
 
   /**

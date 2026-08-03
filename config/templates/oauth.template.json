@@ -1,0 +1,19 @@
+{
+  "_comment_consumerSecret": "Trello API secret from https://trello.com/app-key. This is NOT the server token in key.json — it is the 'Secret' shown alongside your API key. Required.",
+  "consumerSecret": "",
+
+  "_comment_sessionSecret": "Any long random string; signs the session cookie. Changing it signs everyone out. Generate with: openssl rand -hex 32. Required.",
+  "sessionSecret": "",
+
+  "_comment_consumerKey": "Optional. Defaults to the key in config/key.json, which is normally what you want.",
+
+  "_comment_allowedMemberIds": "Optional. Trello member ids permitted to sign in. Leave this out and the owner of the server token is resolved from Trello at first login, which keeps the allowlist tied to the Trello account rather than copied here.",
+
+  "_comment_apiKey": "Optional. Shared key for non-browser clients (cron jobs, scripts), sent as 'X-API-Key: <value>' or 'Authorization: Bearer <value>'. Omit to allow browser sessions only.",
+
+  "_comment_secureCookie": "Set true only once every origin you use is HTTPS. A Secure cookie is never sent over plain HTTP, so turning this on breaks LAN access over http://<ip>:30450.",
+  "secureCookie": false,
+
+  "_comment_appName": "Optional. Shown to you on Trello's authorise screen.",
+  "appName": "Trello Groomer"
+}
