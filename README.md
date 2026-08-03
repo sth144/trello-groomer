@@ -58,10 +58,9 @@ kubectl apply -f .trello-groomer.deploy.yml
 
 Reachable at `http://<node-ip>:30450` — `/` for the client, `/api/docs` for Swagger.
 
-The API pod mounts the same config, cache and log claims as the groomers, so the local PVs'
-`nodeAffinity` schedules it onto the same node automatically. Note its memory limit is 512Mi rather
-than the groomers' 100Mi: parsing the ToDo snapshot alone costs ~40Mi of heap, and reads across
-several boards hold one parsed copy of each.
+The API pod mounts the same config, cache, log and CA-certificate volumes as the groomers, and is
+pinned to the same node. It sits inside the groomers' resource envelope (500Mi limit, 200Mi request):
+the container measured 102.7MiB after parsing the ToDo snapshot and running a full refresh.
 
 ## TODO:
 

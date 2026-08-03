@@ -1,7 +1,8 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: local
+  # CHANGED: align StorageClass name with PV/PVC references below.
+  name: local-storage
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 ---
@@ -20,16 +21,15 @@ spec:
   storageClassName: local-storage
   local:
     # NOTE: this directory must exist
-    path: /home/picocluster/Volumes/trello-groomer-config`
+    path: /home/picocluster/Volumes/trello-groomer-config
   nodeAffinity:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-              - pc2
-              # - pc1
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - pc2
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -66,11 +66,10 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-              - pc2
-              # - pc1
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - pc2
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -107,11 +106,10 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-              - pc2
-              # - pc1
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - pc2
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -128,7 +126,6 @@ spec:
     matchLabels:
       directory: log
 
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -136,7 +133,7 @@ metadata:
   name: trello-groomer-todo
   labels:
     app: trello-groomer-todo
-spec: 
+spec:
   replicas: 1
   selector:
     matchLabels:
@@ -147,6 +144,8 @@ spec:
         app: trello-groomer-todo
         name: trello-groomer-todo
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: pc2
       containers:
         - name: trello-groomer-todo
           image: sthinds/trello-groomer:latest
@@ -160,14 +159,18 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            # - name: trello-groomer-ssl
-            #   mountPath: /etc/ssl/certs
+            - name: trello-groomer-ssl
+              mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-todo-groomer"
           resources:
             limits:
-              memory: "100Mi"
+              memory: 500Mi
+              cpu: 1000m
+            requests:
+              memory: 200Mi
+              cpu: 200m
       volumes:
         - name: trello-groomer-config-volume
           persistentVolumeClaim:
@@ -181,9 +184,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        # - name: trello-groomer-ssl
-        #   hostPath:
-        #     path: /etc/ssl/certs/
+        - name: trello-groomer-ssl
+          hostPath:
+            path: /etc/ssl/certs/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -191,7 +194,7 @@ metadata:
   name: trello-groomer-work
   labels:
     app: trello-groomer-work
-spec: 
+spec:
   replicas: 1
   selector:
     matchLabels:
@@ -202,6 +205,8 @@ spec:
         app: trello-groomer-work
         name: trello-groomer-work
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: pc2
       containers:
         - name: trello-groomer-work
           image: sthinds/trello-groomer:latest
@@ -215,14 +220,18 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            # - name: trello-groomer-ssl
-            #   mountPath: /etc/ssl/certs
+            - name: trello-groomer-ssl
+              mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-work-groomer"
           resources:
             limits:
-              memory: "100Mi"
+              memory: 500Mi
+              cpu: 1000m
+            requests:
+              memory: 200Mi
+              cpu: 200m
       volumes:
         - name: trello-groomer-config-volume
           persistentVolumeClaim:
@@ -236,9 +245,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        # - name: trello-groomer-ssl
-        #   hostPath:
-        #     path: /etc/ssl/certs/
+        - name: trello-groomer-ssl
+          hostPath:
+            path: /etc/ssl/certs/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -246,7 +255,7 @@ metadata:
   name: trello-groomer-media
   labels:
     app: trello-groomer-media
-spec: 
+spec:
   replicas: 1
   selector:
     matchLabels:
@@ -257,6 +266,8 @@ spec:
         app: trello-groomer-media
         name: trello-groomer-media
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: pc2
       containers:
         - name: trello-groomer-media
           image: sthinds/trello-groomer:latest
@@ -270,14 +281,18 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
-            # - name: trello-groomer-ssl
-            #   mountPath: /etc/ssl/certs
+            - name: trello-groomer-ssl
+              mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-media-groomer"
           resources:
             limits:
-              memory: "100Mi"
+              memory: 500Mi
+              cpu: 1000m
+            requests:
+              memory: 200Mi
+              cpu: 200m
       volumes:
         - name: trello-groomer-config-volume
           persistentVolumeClaim:
@@ -291,15 +306,12 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
-        # - name: trello-groomer-ssl
-        #   hostPath:
-        #     path: /etc/ssl/certs/
+        - name: trello-groomer-ssl
+          hostPath:
+            path: /etc/ssl/certs/
 ---
 # Read/write API over the snapshots the groomers leave in the shared cache volume, plus the Angular
 # checklist client. Runs as its own deployment so a fault here cannot disturb a grooming run.
-#
-# It mounts the same claims as the groomers, so the local PVs' nodeAffinity schedules it onto the
-# same node (pc2) automatically — no nodeSelector needed here.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -317,6 +329,8 @@ spec:
         app: trello-groomer-api
         name: trello-groomer-api
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: pc2
       containers:
         - name: trello-groomer-api
           image: sthinds/trello-groomer:latest
@@ -333,6 +347,10 @@ spec:
               mountPath: /usr/src/app/log
             - name: trello-groomer-timezone
               mountPath: /etc/localtime
+            # the API calls api.trello.com to relay writes and to rebuild a board on demand, so it
+            # needs the same CA bundle the groomers do
+            - name: trello-groomer-ssl
+              mountPath: /etc/ssl/certs
           env:
             - name: WHICH_GROOMER
               value: "start-api"
@@ -341,13 +359,15 @@ spec:
             # board whose snapshot backs /api/views
             - name: VIEWS_BOARD
               value: "todo"
-          # Parsing the ToDo snapshot costs ~40Mi of heap on its own, and reads across several
-          # boards keep one parsed copy of each. The groomers' 100Mi would OOM this immediately.
+          # measured at 102.7MiB in the container after parsing the ToDo snapshot and running a
+          # full refresh, so this matches the groomers' envelope with room to spare
           resources:
-            requests:
-              memory: "128Mi"
             limits:
-              memory: "512Mi"
+              memory: 500Mi
+              cpu: 1000m
+            requests:
+              memory: 200Mi
+              cpu: 200m
           readinessProbe:
             httpGet:
               path: /api/health
@@ -373,6 +393,9 @@ spec:
         - name: trello-groomer-timezone
           hostPath:
             path: /usr/share/zoneinfo/America/Chicago
+        - name: trello-groomer-ssl
+          hostPath:
+            path: /etc/ssl/certs/
 ---
 # NodePort keeps this reachable at http://<node-ip>:30450 without an ingress controller. Swap to
 # ClusterIP and front it with an Ingress if you'd rather have a hostname.
