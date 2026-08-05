@@ -5,6 +5,7 @@
   --sprint: #f2a13b;
   --groceries: #4fbe84;
   --research: #7aa7ff;
+  --homelab: #d16bff;
   --accent: var(--muted);
 
   display: block;
@@ -152,6 +153,9 @@ h1 {
 }
 .column[data-list='research'] {
   --accent: var(--research);
+}
+.column[data-list='homelab'] {
+  --accent: var(--homelab);
 }
 
 .column__head h2 {

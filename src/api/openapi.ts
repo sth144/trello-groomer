@@ -31,7 +31,10 @@ const checklistSchema = {
 const viewSchema = {
   type: "object",
   properties: {
-    key: { type: "string", enum: ["sprint", "groceries", "research"] },
+    key: {
+      type: "string",
+      enum: ["sprint", "groceries", "research", "homelab"],
+    },
     label: { type: "string", example: "Groceries & Errands" },
     card: {
       nullable: true,
@@ -49,7 +52,8 @@ const viewSchema = {
     capturedAt: {
       type: "string",
       format: "date-time",
-      description: "when the groomer wrote the snapshot this response was read from",
+      description:
+        "when the groomer wrote the snapshot this response was read from",
     },
     ageSeconds: {
       type: "integer",
@@ -113,12 +117,12 @@ export const openApiDocument = {
       },
     },
   },
-  security: [
-    { trelloSession: [] as string[] },
-    { apiKey: [] as string[] },
-  ],
+  security: [{ trelloSession: [] as string[] }, { apiKey: [] as string[] }],
   tags: [
-    { name: "views", description: "Resolved Sprint / Groceries / Research cards" },
+    {
+      name: "views",
+      description: "Resolved Sprint / Groceries / Research cards",
+    },
     { name: "boards", description: "Raw cached board data" },
     { name: "writes", description: "Mutations relayed to Trello" },
     { name: "meta", description: "Health and diagnostics" },
@@ -229,7 +233,10 @@ export const openApiDocument = {
             name: "key",
             in: "path",
             required: true,
-            schema: { type: "string", enum: ["sprint", "groceries", "research"] },
+            schema: {
+              type: "string",
+              enum: ["sprint", "groceries", "research", "homelab"],
+            },
           },
         ],
         responses: {
@@ -308,7 +315,12 @@ export const openApiDocument = {
         summary: "One card, with its checklists",
         parameters: [
           boardParam,
-          { name: "cardId", in: "path", required: true, schema: { type: "string" } },
+          {
+            name: "cardId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
         ],
         responses: {
           "200": { description: "OK" },
@@ -386,7 +398,8 @@ export const openApiDocument = {
             content: { "application/json": { schema: errorSchema } },
           },
           "502": {
-            description: "Trello could not be reached, or returned nothing usable",
+            description:
+              "Trello could not be reached, or returned nothing usable",
             content: { "application/json": { schema: errorSchema } },
           },
         },
@@ -397,7 +410,12 @@ export const openApiDocument = {
         tags: ["writes"],
         summary: "Toggle a check item, relayed to Trello",
         parameters: [
-          { name: "cardId", in: "path", required: true, schema: { type: "string" } },
+          {
+            name: "cardId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
           {
             name: "checkItemId",
             in: "path",

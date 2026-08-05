@@ -25,6 +25,7 @@ describe("auth", () => {
       for (const path of [
         "/api/views",
         "/api/views/groceries",
+        "/api/views/homelab",
         "/api/boards/todo/cards",
         "/api/boards/todo/stats",
         "/api/cards/abc/checkItem/def",
@@ -45,7 +46,9 @@ describe("auth", () => {
     });
 
     it("is not fooled by a path that merely contains a public prefix", () => {
-      expect(isPublicPath("/api/boards/todo/cards?next=/auth/")).to.equal(false);
+      expect(isPublicPath("/api/boards/todo/cards?next=/auth/")).to.equal(
+        false
+      );
       expect(isPublicPath("/api/health/../views")).to.equal(false);
     });
   });
@@ -185,7 +188,10 @@ describe("auth", () => {
     });
 
     it("resolves the token owner once and caches it", async () => {
-      const allowlist = new MemberAllowlist(undefined, { key: "k", token: "t" });
+      const allowlist = new MemberAllowlist(undefined, {
+        key: "k",
+        token: "t",
+      });
       let calls = 0;
       (allowlist as any).lookupTokenOwner = async () => {
         calls += 1;
@@ -198,7 +204,10 @@ describe("auth", () => {
     });
 
     it("coalesces concurrent lookups", async () => {
-      const allowlist = new MemberAllowlist(undefined, { key: "k", token: "t" });
+      const allowlist = new MemberAllowlist(undefined, {
+        key: "k",
+        token: "t",
+      });
       let calls = 0;
       (allowlist as any).lookupTokenOwner = async () => {
         calls += 1;
@@ -216,7 +225,10 @@ describe("auth", () => {
     });
 
     it("does not cache a failed lookup", async () => {
-      const allowlist = new MemberAllowlist(undefined, { key: "k", token: "t" });
+      const allowlist = new MemberAllowlist(undefined, {
+        key: "k",
+        token: "t",
+      });
       let calls = 0;
       (allowlist as any).lookupTokenOwner = async () => {
         calls += 1;
