@@ -2,7 +2,6 @@ import { BoardController } from "../controller/board.controller";
 import { BoardModel } from "../model/board.model";
 import { logger } from "../lib/logger";
 import { Snapshot, SnapshotStore } from "./snapshot.store";
-const boards = require("../../config/boards.json");
 
 /*************************************************************************************************
  * On-demand rebuild of a board straight from Trello.                                             *
@@ -25,16 +24,18 @@ export interface RefreshResult {
 
 /**
  * Board models are required lazily: the media groomer drags in audio and embedding dependencies
- *  this process has no other use for.
+ *  this process has no other use for. config/boards.json is deliberately required inside the
+ *  factories too — it is gitignored and dockerignored, so it is absent at build time and only
+ *  mounted at runtime. Requiring it at module scope breaks anything that merely imports this file.
  */
 const MODEL_FACTORIES: Record<string, () => BoardModel> = {
   todo: () => {
     const { ToDoBoardModel } = require("../groomer/todo.groomer");
-    return new ToDoBoardModel(boards.todo.id);
+    return new ToDoBoardModel(require("../../config/boards.json").todo.id);
   },
   work: () => {
     const { WorkBoardModel } = require("../groomer/work.groomer");
-    return new WorkBoardModel(boards.work.id);
+    return new WorkBoardModel(require("../../config/boards.json").work.id);
   },
 };
 
