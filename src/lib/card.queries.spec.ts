@@ -165,12 +165,13 @@ describe("card.queries", () => {
   });
 
   describe("getCardQueryByKey", () => {
-    it("resolves the three known views", () => {
+    it("resolves the four known views", () => {
       expect(getCardQueryByKey("sprint").label).to.equal("Sprint");
       expect(getCardQueryByKey("groceries").label).to.equal(
         "Groceries & Errands"
       );
       expect(getCardQueryByKey("research").label).to.equal("Research Tasks");
+      expect(getCardQueryByKey("homelab").label).to.equal("Homelab");
     });
 
     it("returns undefined for anything else", () => {

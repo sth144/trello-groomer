@@ -52,10 +52,18 @@ export const RESEARCH_QUERY: CardQuery = {
   keywords: ["research tasks", "research task", "research"],
 };
 
+export const HOMELAB_QUERY: CardQuery = {
+  key: "homelab",
+  label: "Homelab",
+  itemTag: "[homelab task]",
+  keywords: ["homelab", "homelab task", "homelab ticket", "digital"],
+};
+
 export const CARD_QUERIES: CardQuery[] = [
   SPRINT_QUERY,
   GROCERIES_QUERY,
   RESEARCH_QUERY,
+  HOMELAB_QUERY,
 ];
 
 export function getCardQueryByKey(key: string): CardQuery | undefined {
