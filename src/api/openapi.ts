@@ -204,10 +204,12 @@ export const openApiDocument = {
     "/api/views": {
       get: {
         tags: ["views"],
-        summary: "All three checklist views in one call",
+        summary: "Every checklist view in one call",
         description:
-          "Resolves the current Sprint, Groceries & Errands and Research Tasks cards on the ToDo " +
-          "board and returns their checklists. This is the endpoint the Angular client polls.",
+          "Resolves the current aggregator cards on the ToDo board (Groceries & Errands first, " +
+          "then Sprint, Research Tasks and Homelab) and returns their checklists, followed by one " +
+          "view per card in the Today list that carries a checklist of its own. This is the " +
+          "endpoint the Angular client polls.",
         responses: {
           "200": {
             description: "OK",

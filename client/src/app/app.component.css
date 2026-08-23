@@ -6,6 +6,7 @@
   --groceries: #4fbe84;
   --research: #7aa7ff;
   --homelab: #d16bff;
+  --today: #f2748c;
   --accent: var(--muted);
 
   display: block;
@@ -156,6 +157,10 @@ h1 {
 }
 .column[data-list='homelab'] {
   --accent: var(--homelab);
+}
+/* ad-hoc cards pulled in from the Today list all share one hue */
+.column[data-list^='today-'] {
+  --accent: var(--today);
 }
 
 .column__head h2 {
