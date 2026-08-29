@@ -6,14 +6,23 @@ import { TrelloHttpClient } from "../lib/http.client";
 /*************************************************************************************************
  * Trello OAuth 1.0a login, gating the client and the whole API.                                  *
  *                                                                                               *
- * Trello is used as the identity provider rather than Google for two reasons: it is the tie the   *
- *  board owner actually wants (logging in *is* logging into Trello), and its OAuth accepts a      *
- *  return URL at request time instead of pre-registering one — so a single deployment serves      *
- *  http://<lan-ip>:30450 and https://<host> without extra configuration.                          *
+ * Trello is the identity provider rather than Google because it is the tie the board owner        *
+ *  actually wants: logging in *is* logging into Trello.                                          *
  *                                                                                               *
- * That last part relies on passport-oauth1 resolving a relative callbackURL against the incoming  *
- *  request, honouring X-Forwarded-Proto / X-Forwarded-Host when `trust proxy` is set. Keep the     *
- *  callback relative and `trust proxy` on, or remote HTTPS logins will be handed an http:// URL.   *
+ * The callbackURL below is relative, and passport-oauth1 resolves it against the incoming        *
+ *  request — honouring X-Forwarded-Proto / X-Forwarded-Host when `trust proxy` is set. Keep the   *
+ *  callback relative and `trust proxy` on, or a login behind the proxy is handed an http:// URL.  *
+ *                                                                                               *
+ * That does NOT make the deployment origin-agnostic. Trello validates the resolved callback       *
+ *  against the API key's registered Allowed Origins, and has refused wildcard ("*") origins       *
+ *  since November 2021 — an unregistered origin fails at the authorize step with                  *
+ *  "Invalid return_url", after the request-token call has already succeeded. Trello also refuses  *
+ *  plain http:// for anything but localhost, so a bare LAN name is not registerable at all.       *
+ *                                                                                               *
+ * So every origin users reach this by must be registered under the API key at                     *
+ *  https://trello.com/apps/admin -> the Power-Up -> API Key tab. In practice that means keeping   *
+ *  to ONE canonical HTTPS origin (the reverse proxy 301s the LAN name to it) rather than serving  *
+ *  the same deployment on several. One origin is also what lets secureCookie stay true.           *
  *************************************************************************************************/
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -45,8 +54,10 @@ export interface AuthConfig {
   /** optional shared key for non-browser clients (cron, scripts), sent as X-API-Key or Bearer */
   apiKey?: string;
   /**
-   * mark the session cookie Secure. Must stay false while the LAN is served over plain HTTP, since
-   *  a Secure cookie would never be sent there.
+   * mark the session cookie Secure. Safe to leave true once every origin is HTTPS, which is the
+   *  arrangement the header comment describes. Only drop it to false if some origin is served over
+   *  plain HTTP, since a Secure cookie is never sent there — but note such an origin cannot
+   *  complete a Trello login anyway, so false buys a session that can never be established.
    */
   secureCookie?: boolean;
   appName?: string;
