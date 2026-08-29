@@ -3,6 +3,7 @@ import {
   AuthConfigError,
   CALLBACK_PATH,
   MemberAllowlist,
+  createAuth,
   isPublicPath,
   loadAuthConfig,
   wantsHtml,
@@ -246,5 +247,66 @@ describe("auth", () => {
       expect(firstFailed).to.equal(true);
       expect(await allowlist.getAllowedIds()).to.deep.equal(["owner-id"]);
     });
+  });
+});
+
+/**
+ * /api/health has to stay public for the kubernetes probes, so what it discloses is decided by
+ *  isAuthenticated rather than by the gate. That makes this the seam where board names could leak
+ *  to the public origin, and worth pinning independently of requireAuth.
+ */
+describe("isAuthenticated", () => {
+  const handles = (apiKey?: string) =>
+    createAuth(
+      {
+        consumerSecret: "secret",
+        sessionSecret: "signing",
+        apiKey,
+      },
+      { key: "k", token: "t" }
+    );
+
+  it("accepts a request carrying a session user", () => {
+    expect(
+      handles().isAuthenticated({ session: { user: { id: "m" } }, headers: {} })
+    ).to.equal(true);
+  });
+
+  it("rejects a request with a session but no user on it", () => {
+    expect(handles().isAuthenticated({ session: {}, headers: {} })).to.equal(
+      false
+    );
+  });
+
+  it("rejects a request with no session at all", () => {
+    expect(handles().isAuthenticated({ headers: {} })).to.equal(false);
+  });
+
+  it("accepts a matching X-API-Key when one is configured", () => {
+    expect(
+      handles("shared").isAuthenticated({ headers: { "x-api-key": "shared" } })
+    ).to.equal(true);
+  });
+
+  it("accepts the same key as a bearer token", () => {
+    expect(
+      handles("shared").isAuthenticated({
+        headers: { authorization: "Bearer shared" },
+      })
+    ).to.equal(true);
+  });
+
+  it("rejects a wrong key", () => {
+    expect(
+      handles("shared").isAuthenticated({ headers: { "x-api-key": "nope" } })
+    ).to.equal(false);
+  });
+
+  /** with no apiKey configured there is no header path in at all, empty header included */
+  it("does not let an absent apiKey be matched by an absent header", () => {
+    expect(handles().isAuthenticated({ headers: { "x-api-key": "" } })).to.equal(
+      false
+    );
+    expect(handles().isAuthenticated({ headers: {} })).to.equal(false);
   });
 });

@@ -179,6 +179,11 @@ export interface AuthHandles {
   requireAuth: (req: any, res: any, next: () => void) => void;
   /** registers /auth/* routes on the app */
   mountRoutes: (app: any) => void;
+  /**
+   * whether this request carries a session or a valid API key. Lets the endpoints that must stay
+   *  public still vary what they disclose, without restating the rule requireAuth applies.
+   */
+  isAuthenticated: (req: any) => boolean;
 }
 
 export function createAuth(
@@ -252,18 +257,22 @@ export function createAuth(
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
+  const isAuthenticated = (req: any): boolean => {
+    if (req.session && req.session.user) {
+      return true;
+    }
+    return (
+      config.apiKey !== undefined && presentedApiKey(req) === config.apiKey
+    );
+  };
+
   const requireAuth = (req: any, res: any, next: () => void) => {
     if (isPublicPath(req.path)) {
       next();
       return;
     }
 
-    if (req.session && req.session.user) {
-      next();
-      return;
-    }
-
-    if (config.apiKey && presentedApiKey(req) === config.apiKey) {
+    if (isAuthenticated(req)) {
       next();
       return;
     }
@@ -331,7 +340,12 @@ export function createAuth(
     });
   };
 
-  return { middleware: [session, passport.initialize()], requireAuth, mountRoutes };
+  return {
+    middleware: [session, passport.initialize()],
+    requireAuth,
+    mountRoutes,
+    isAuthenticated,
+  };
 }
 
 function presentedApiKey(req: any): string | undefined {

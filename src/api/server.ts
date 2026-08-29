@@ -9,6 +9,7 @@ import { getCardQueryByKey } from "../lib/card.queries";
 import { openApiDocument } from "./openapi";
 import { BoardRefreshError, BoardRefresher } from "./refresh";
 import { AuthConfig, createAuth } from "./auth";
+import { AUTH_RATE_LIMIT, createRateLimitMiddleware } from "./rate.limit";
 
 /*************************************************************************************************
  * Express app exposing the groomer's cached board state, plus write-through endpoints for check    *
@@ -96,11 +97,23 @@ export function createApiServer(options: ApiServerOptions) {
     next();
   });
 
+  /**
+   * with auth off nothing is gated anyway, so treat every caller as trusted rather than hiding
+   *  detail from a deployment that is already wide open
+   */
+  let isAuthenticated: (req: unknown) => boolean = () => true;
+
   if (options.auth) {
     const auth = createAuth(options.auth, options.secrets);
+    isAuthenticated = auth.isAuthenticated;
     for (const layer of auth.middleware) {
       app.use(layer);
     }
+    /**
+     * ahead of the routes themselves: /auth/* has to stay public for the login to be reachable,
+     *  and each of those routes spends Trello quota. See rate.limit.ts.
+     */
+    app.use("/auth", createRateLimitMiddleware(AUTH_RATE_LIMIT));
     auth.mountRoutes(app);
     /** mounted after the /auth routes so the login flow itself is reachable */
     app.use(auth.requireAuth);
@@ -150,7 +163,16 @@ export function createApiServer(options: ApiServerOptions) {
 
   /*********************************** meta / docs ***********************************/
 
-  app.get("/api/health", (_req: ApiRequest, res: ApiResponse) => {
+  /**
+   * public by necessity — the kubernetes probes hit this and gating it restart-loops the pod — so
+   *  an unauthenticated caller gets only what a probe needs. Board names and snapshot times are
+   *  the board owner's business, and this endpoint is reachable from the public origin.
+   */
+  app.get("/api/health", (req: ApiRequest, res: ApiResponse) => {
+    if (!isAuthenticated(req)) {
+      res.json({ status: "ok" });
+      return;
+    }
     res.json({
       status: "ok",
       uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),

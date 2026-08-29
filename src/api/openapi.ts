@@ -92,8 +92,11 @@ export const openApiDocument = {
       "**Writes** go straight to Trello and are then replayed on top of subsequent snapshot reads " +
       "until a newer snapshot absorbs them, so a toggle is visible immediately.\n\n" +
       "**Auth**: everything here except `/api/health` requires a session from signing in with " +
-      "Trello at `/auth/trello`, and only the Trello account that owns the server token is let in. " +
-      "Browser requests without a session are redirected to the login; anything else gets a 401.",
+      "Trello at `/auth/trello`, and only the Trello account named in `allowedMemberIds` is let " +
+      "in — defaulting to whoever owns the server token. Browser requests without a session are " +
+      "redirected to the login; anything else gets a 401. The `/auth/*` routes are public by " +
+      "necessity and each spends Trello quota, so they are rate limited and answer 429 with a " +
+      "`Retry-After` header once the window is full.",
   },
   servers: [{ url: "/", description: "this server" }],
   components: {
@@ -161,10 +164,12 @@ export const openApiDocument = {
     "/api/health": {
       get: {
         tags: ["meta"],
-        summary: "Liveness plus snapshot freshness per board",
+        summary: "Liveness, plus snapshot freshness per board when signed in",
         description:
           "The only endpoint reachable without signing in — the kubernetes readiness and liveness " +
-          "probes depend on it, and gating it would restart-loop the pod.",
+          "probes depend on it, and gating it would restart-loop the pod. Because it is reachable " +
+          "from the public origin, an unauthenticated caller gets `{ status }` and nothing else; " +
+          "board names, snapshot times and counters are returned only to a session or API key.",
         /** empty overrides the document-level requirement: this endpoint needs no session */
         security: [] as unknown[],
         responses: {
@@ -176,7 +181,10 @@ export const openApiDocument = {
                   type: "object",
                   properties: {
                     status: { type: "string", example: "ok" },
-                    uptimeSeconds: { type: "integer" },
+                    uptimeSeconds: {
+                      type: "integer",
+                      description: "omitted, with everything below, when not signed in",
+                    },
                     trelloRequests: {
                       type: "integer",
                       description: "writes relayed since this process started",
