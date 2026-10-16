@@ -246,7 +246,7 @@ h1 {
   cursor: pointer;
 }
 
-.item input {
+.item label input {
   flex: none;
   width: 1rem;
   height: 1rem;
@@ -255,7 +255,7 @@ h1 {
   cursor: pointer;
 }
 
-.item input:focus-visible {
+.item label input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -309,9 +309,10 @@ h1 {
   border-bottom: 1px dashed var(--rule);
 }
 
+/* text lines up with the item names: label padding + checkbox + gap */
 .rename {
   margin-top: 0;
-  padding: 0.55rem 0.15rem;
+  padding: 0.55rem 0.15rem 0.55rem 1.75rem;
 }
 
 .add:focus-visible,
