@@ -15,6 +15,11 @@ interface StateEntry {
   at: number;
 }
 
+interface NameEntry {
+  name: string;
+  at: number;
+}
+
 interface AddedEntry {
   item: CheckItem;
   at: number;
@@ -23,6 +28,8 @@ interface AddedEntry {
 export class WriteOverlay {
   /** checkItemId -> most recent state we relayed */
   private states: Record<string, StateEntry> = {};
+  /** checkItemId -> most recent name we relayed */
+  private names: Record<string, NameEntry> = {};
   /** checklistId -> items we created that the snapshot may not know about */
   private added: Record<string, AddedEntry[]> = {};
   /** checkItemId -> when we deleted it */
@@ -32,6 +39,10 @@ export class WriteOverlay {
 
   public recordStateChange(checkItemId: string, state: string): void {
     this.states[checkItemId] = { state, at: this.now() };
+  }
+
+  public recordRename(checkItemId: string, name: string): void {
+    this.names[checkItemId] = { name, at: this.now() };
   }
 
   public recordAdd(checklistId: string, item: CheckItem): void {
@@ -44,6 +55,7 @@ export class WriteOverlay {
   public recordRemove(checkItemId: string): void {
     this.removed[checkItemId] = this.now();
     delete this.states[checkItemId];
+    delete this.names[checkItemId];
     for (const checklistId of Object.keys(this.added)) {
       this.added[checklistId] = this.added[checklistId].filter(
         (entry) => entry.item.id !== checkItemId
@@ -64,19 +76,7 @@ export class WriteOverlay {
       if (removedAt !== undefined && removedAt > capturedAtMs) {
         continue;
       }
-
-      const pendingState = this.states[item.id];
-      if (pendingState !== undefined && pendingState.at > capturedAtMs) {
-        items.push({
-          id: item.id,
-          idChecklist: item.idChecklist,
-          name: item.name,
-          state: pendingState.state,
-        });
-        continue;
-      }
-
-      items.push(item);
+      items.push(this.withPendingEdits(item, capturedAtMs));
     }
 
     const pendingAdds = this.added[checklist.id] || [];
@@ -88,23 +88,11 @@ export class WriteOverlay {
       if (items.some((item) => item.id === entry.item.id)) {
         continue;
       }
-
       /**
-       * an item can be created and then toggled before any snapshot has seen it, so its pending
-       *  state has to win over the state it was created with.
+       * an item can be created and then toggled or renamed before any snapshot has seen it, so
+       *  its pending edits have to win over what it was created with.
        */
-      const pendingState = this.states[entry.item.id];
-      const state =
-        pendingState !== undefined && pendingState.at > capturedAtMs
-          ? pendingState.state
-          : entry.item.state;
-
-      items.push({
-        id: entry.item.id,
-        idChecklist: entry.item.idChecklist,
-        name: entry.item.name,
-        state,
-      });
+      items.push(this.withPendingEdits(entry.item, capturedAtMs));
     }
 
     return {
@@ -115,6 +103,24 @@ export class WriteOverlay {
     };
   }
 
+  /** a copy of `item` with any state or name relayed after the snapshot laid over it */
+  private withPendingEdits(item: CheckItem, capturedAtMs: number): CheckItem {
+    const pendingState = this.states[item.id];
+    const pendingName = this.names[item.id];
+    return {
+      id: item.id,
+      idChecklist: item.idChecklist,
+      name:
+        pendingName !== undefined && pendingName.at > capturedAtMs
+          ? pendingName.name
+          : item.name,
+      state:
+        pendingState !== undefined && pendingState.at > capturedAtMs
+          ? pendingState.state
+          : item.state,
+    };
+  }
+
   /** drop entries the given snapshot has already absorbed, so the overlay does not grow forever */
   public prune(snapshotCapturedAt: Date): void {
     const capturedAtMs = snapshotCapturedAt.getTime();
@@ -122,6 +128,11 @@ export class WriteOverlay {
     for (const id of Object.keys(this.states)) {
       if (this.states[id].at <= capturedAtMs) {
         delete this.states[id];
+      }
+    }
+    for (const id of Object.keys(this.names)) {
+      if (this.names[id].at <= capturedAtMs) {
+        delete this.names[id];
       }
     }
     for (const id of Object.keys(this.removed)) {
@@ -144,6 +155,7 @@ export class WriteOverlay {
   public get size(): number {
     return (
       Object.keys(this.states).length +
+      Object.keys(this.names).length +
       Object.keys(this.removed).length +
       Object.keys(this.added).length
     );

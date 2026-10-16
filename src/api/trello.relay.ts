@@ -98,6 +98,36 @@ export class TrelloRelay {
     };
   }
 
+  /** rename a check item. Same card-keyed endpoint as the toggle, with `name` instead of `state` */
+  public async renameCheckItem(
+    cardId: string,
+    checkItemId: string,
+    name: string
+  ): Promise<CheckItem> {
+    if (!name || !name.trim()) {
+      throw new TrelloRelayError("name is required", 400);
+    }
+
+    logger.info(`Relaying rename of checkItem ${checkItemId}`);
+    const response = await withTimeout(
+      this.httpClient.asyncPut(`/cards/${cardId}/checkItem/${checkItemId}`, {
+        name: name.trim(),
+      }),
+      `PUT checkItem ${checkItemId}`
+    );
+
+    this.assertNotTrelloError(response, `rename check item ${checkItemId}`);
+    const renamed = (response && response.name) || name.trim();
+    this.overlay.recordRename(checkItemId, renamed);
+
+    return {
+      id: checkItemId,
+      idChecklist: (response && response.idChecklist) || "",
+      name: renamed,
+      state: (response && response.state) || "",
+    };
+  }
+
   public async addCheckItem(
     checklistId: string,
     name: string,

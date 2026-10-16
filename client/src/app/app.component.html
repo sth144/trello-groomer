@@ -96,15 +96,37 @@
                       [class.item--done]="stateOf(item) === 'complete'"
                       [class.item--pending]="isPending(item)"
                     >
-                      <label>
+                      @if (editing() === item.id) {
                         <input
-                          type="checkbox"
-                          [checked]="stateOf(item) === 'complete'"
-                          [disabled]="isPending(item)"
-                          (change)="toggle(checklist.cardId, item)"
+                          #rename
+                          class="rename"
+                          type="text"
+                          [value]="item.name"
+                          [attr.aria-label]="'Rename ' + item.name"
+                          (keydown.enter)="saveEdit(checklist.cardId, item, rename)"
+                          (keydown.escape)="cancelEdit()"
+                          (blur)="saveEdit(checklist.cardId, item, rename)"
                         />
-                        <span class="item__name">{{ item.name }}</span>
-                      </label>
+                      } @else {
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="stateOf(item) === 'complete'"
+                            [disabled]="isPending(item)"
+                            (change)="toggle(checklist.cardId, item)"
+                          />
+                          <span class="item__name">{{ item.name }}</span>
+                        </label>
+                        <button
+                          type="button"
+                          class="edit"
+                          [attr.aria-label]="'Rename ' + item.name"
+                          [disabled]="isPending(item)"
+                          (click)="startEdit(item)"
+                        >
+                          Edit
+                        </button>
+                      }
                     </li>
                   }
                 </ul>

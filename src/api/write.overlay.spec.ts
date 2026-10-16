@@ -111,6 +111,42 @@ describe("WriteOverlay", () => {
     expect(added.state).to.equal("complete");
   });
 
+  it("applies a rename made after the snapshot was captured", () => {
+    const overlay = overlayAt("2026-08-01T12:05:00.000Z");
+    overlay.recordRename("item-1", "Soy milk");
+
+    const result = overlay.apply(checklist(), SNAPSHOT_AT);
+
+    expect(result.checkItems[0].name).to.equal("Soy milk");
+    /** renaming leaves the state alone */
+    expect(result.checkItems[0].state).to.equal("incomplete");
+    expect(result.checkItems[1].name).to.equal("Bread");
+  });
+
+  it("ignores a rename the snapshot already absorbed", () => {
+    const overlay = overlayAt("2026-08-01T11:55:00.000Z");
+    overlay.recordRename("item-1", "Soy milk");
+
+    const result = overlay.apply(checklist(), SNAPSHOT_AT);
+
+    expect(result.checkItems[0].name).to.equal("Oat milk");
+  });
+
+  it("applies a rename to an item that only exists as a pending add", () => {
+    const overlay = overlayAt("2026-08-01T12:05:00.000Z");
+    overlay.recordAdd("checklist-1", {
+      id: "item-3",
+      idChecklist: "checklist-1",
+      name: "Cofee",
+      state: "incomplete",
+    });
+    overlay.recordRename("item-3", "Coffee");
+
+    const result = overlay.apply(checklist(), SNAPSHOT_AT);
+
+    expect(result.checkItems[2].name).to.equal("Coffee");
+  });
+
   it("drops a pending add when the item is deleted again", () => {
     const overlay = overlayAt("2026-08-01T12:05:00.000Z");
     overlay.recordAdd("checklist-1", {
@@ -142,6 +178,7 @@ describe("WriteOverlay", () => {
   it("prunes entries a newer snapshot has absorbed", () => {
     const overlay = overlayAt("2026-08-01T11:55:00.000Z");
     overlay.recordStateChange("item-1", "complete");
+    overlay.recordRename("item-1", "Soy milk");
     overlay.recordRemove("item-2");
     overlay.recordAdd("checklist-1", {
       id: "item-3",

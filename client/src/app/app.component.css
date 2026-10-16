@@ -232,10 +232,13 @@ h1 {
 }
 
 .item {
+  display: flex;
+  align-items: flex-start;
   border-bottom: 1px solid var(--rule);
 }
 
 .item label {
+  flex: 1;
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
@@ -283,7 +286,18 @@ h1 {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.add {
+.edit {
+  padding: 0.55rem 0.15rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.add,
+.rename {
   width: 100%;
   margin-top: 0.5rem;
   padding: 0.45rem 0.15rem;
@@ -295,7 +309,13 @@ h1 {
   border-bottom: 1px dashed var(--rule);
 }
 
-.add:focus-visible {
+.rename {
+  margin-top: 0;
+  padding: 0.55rem 0.15rem;
+}
+
+.add:focus-visible,
+.rename:focus-visible {
   outline: none;
   border-bottom-color: var(--accent);
 }

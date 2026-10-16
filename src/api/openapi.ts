@@ -418,7 +418,9 @@ export const openApiDocument = {
     "/api/cards/{cardId}/checkItem/{checkItemId}": {
       put: {
         tags: ["writes"],
-        summary: "Toggle a check item, relayed to Trello",
+        summary: "Toggle or rename a check item, relayed to Trello",
+        description:
+          "Send `name` to rename the item, otherwise `state` to toggle it.",
         parameters: [
           {
             name: "cardId",
@@ -439,9 +441,9 @@ export const openApiDocument = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["state"],
                 properties: {
                   state: { type: "string", enum: ["complete", "incomplete"] },
+                  name: { type: "string" },
                 },
               },
             },
@@ -453,7 +455,7 @@ export const openApiDocument = {
             content: { "application/json": { schema: checkItemSchema } },
           },
           "400": {
-            description: "Missing or invalid state",
+            description: "Missing or invalid state, or an empty name",
             content: { "application/json": { schema: errorSchema } },
           },
           "502": {

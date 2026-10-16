@@ -1,4 +1,13 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   CheckItemState,
   ChecklistsService,
@@ -47,9 +56,14 @@ export class AppComponent implements OnDestroy {
 
   identity = signal<Identity | null>(null);
 
+  /** the check item whose name is open for editing */
+  editing = signal<string | null>(null);
+  private renameInput = viewChild<ElementRef<HTMLInputElement>>('rename');
+
   private timer = setInterval(() => this.refresh(), REFRESH_MS);
 
   constructor() {
+    effect(() => this.renameInput()?.nativeElement.select());
     this.refresh();
     this.api.getIdentity().subscribe({
       next: (identity) => this.identity.set(identity),
@@ -171,6 +185,39 @@ export class AppComponent implements OnDestroy {
     });
   }
 
+  startEdit(item: ViewCheckItem): void {
+    if (!this.isPending(item)) this.editing.set(item.id);
+  }
+
+  cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  /**
+   * Enter and blur both land here, and closing the input blurs it, so only the first call for an
+   * open edit does anything.
+   */
+  saveEdit(cardId: string, item: ViewCheckItem, input: HTMLInputElement): void {
+    if (this.editing() !== item.id) return;
+    this.editing.set(null);
+
+    const name = input.value.trim();
+    if (!name || name === item.name) return;
+
+    this.setPending(item.id, true);
+    this.api.renameCheckItem(cardId, item.id, name).subscribe({
+      next: (renamed) => {
+        this.renameLocally(item.id, renamed.name);
+        this.setPending(item.id, false);
+        this.error.set(null);
+      },
+      error: () => {
+        this.setPending(item.id, false);
+        this.error.set(`Trello rejected the rename. Kept "${item.name}".`);
+      },
+    });
+  }
+
   /** add to the bottom of a checklist. The input keeps its text until Trello accepts the item */
   addItem(checklistId: string, input: HTMLInputElement): void {
     const name = input.value.trim();
@@ -214,6 +261,20 @@ export class AppComponent implements OnDestroy {
       month: 'short',
       day: 'numeric',
     });
+  }
+
+  private renameLocally(checkItemId: string, name: string): void {
+    this.views.update((views) =>
+      views.map((view) => ({
+        ...view,
+        checklists: view.checklists.map((checklist) => ({
+          ...checklist,
+          checkItems: checklist.checkItems.map((existing) =>
+            existing.id === checkItemId ? { ...existing, name } : existing,
+          ),
+        })),
+      })),
+    );
   }
 
   private updateChecklist(

@@ -350,11 +350,19 @@ export function createApiServer(options: ApiServerOptions) {
     "/api/cards/:cardId/checkItem/:checkItemId",
     async (req: ApiRequest, res: ApiResponse) => {
       try {
-        const updated = await relay.setCheckItemState(
-          req.params.cardId,
-          req.params.checkItemId,
-          (req.body || {}).state
-        );
+        const body = req.body || {};
+        const updated =
+          body.name !== undefined
+            ? await relay.renameCheckItem(
+                req.params.cardId,
+                req.params.checkItemId,
+                body.name
+              )
+            : await relay.setCheckItemState(
+                req.params.cardId,
+                req.params.checkItemId,
+                body.state
+              );
         res.json(updated);
       } catch (e) {
         handleWriteError(e, res);
