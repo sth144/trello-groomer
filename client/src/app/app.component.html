@@ -109,6 +109,16 @@
                   }
                 </ul>
               }
+
+              <input
+                #draft
+                class="add"
+                type="text"
+                placeholder="Add an item"
+                [attr.aria-label]="'Add to ' + checklist.name"
+                [disabled]="isAdding(checklist.id)"
+                (keydown.enter)="addItem(checklist.id, draft)"
+              />
             </article>
           }
         }

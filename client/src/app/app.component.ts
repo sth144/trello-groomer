@@ -171,6 +171,33 @@ export class AppComponent implements OnDestroy {
     });
   }
 
+  /** add to the bottom of a checklist. The input keeps its text until Trello accepts the item */
+  addItem(checklistId: string, input: HTMLInputElement): void {
+    const name = input.value.trim();
+    if (!name || this.pending().has(checklistId)) return;
+
+    this.setPending(checklistId, true);
+    this.api.addCheckItem(checklistId, name).subscribe({
+      next: (created) => {
+        this.updateChecklist(checklistId, (items) => [
+          ...items,
+          { id: created.id, name: created.name, state: created.state },
+        ]);
+        input.value = '';
+        this.setPending(checklistId, false);
+        this.error.set(null);
+      },
+      error: () => {
+        this.setPending(checklistId, false);
+        this.error.set(`Trello rejected "${name}". It was not added.`);
+      },
+    });
+  }
+
+  isAdding(checklistId: string): boolean {
+    return this.pending().has(checklistId);
+  }
+
   freshness(seconds: number | null): string {
     if (seconds === null) return '';
     if (seconds < 90) return `${seconds}s old`;
@@ -187,6 +214,22 @@ export class AppComponent implements OnDestroy {
       month: 'short',
       day: 'numeric',
     });
+  }
+
+  private updateChecklist(
+    checklistId: string,
+    change: (items: ViewCheckItem[]) => ViewCheckItem[],
+  ): void {
+    this.views.update((views) =>
+      views.map((view) => ({
+        ...view,
+        checklists: view.checklists.map((checklist) =>
+          checklist.id === checklistId
+            ? { ...checklist, checkItems: change(checklist.checkItems) }
+            : checklist,
+        ),
+      })),
+    );
   }
 
   private setOptimistic(id: string, state: CheckItemState): void {

@@ -283,6 +283,27 @@ h1 {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+.add {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.15rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.add:focus-visible {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.add:disabled {
+  opacity: 0.6;
+}
+
 .empty {
   margin: 0.75rem 0 0;
   font-size: 0.85rem;

@@ -72,4 +72,11 @@ export class ChecklistsService {
       { state },
     );
   }
+
+  addCheckItem(checklistId: string, name: string): Observable<ViewCheckItem> {
+    return this.http.post<ViewCheckItem>(
+      `/api/checklists/${checklistId}/checkItems`,
+      { name },
+    );
+  }
 }
