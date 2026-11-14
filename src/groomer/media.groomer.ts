@@ -131,6 +131,21 @@ const CACHE_VERSION = 6;
 const MEDIA_GROOMER_ATTACHMENT_PREFIX = "media-groomer:";
 const DESCRIPTION_START = "<!-- media-groomer:start -->";
 const DESCRIPTION_END = "<!-- media-groomer:end -->";
+const STREAMING_LABEL_PREFIX = "Streaming: ";
+
+export function streamingLabelName(provider: string): string {
+  return `${STREAMING_LABEL_PREFIX}${provider.trim()}`;
+}
+
+export function streamingProvidersFromDescription(description: string): string[] {
+  const start = description.indexOf(DESCRIPTION_START);
+  const end = description.indexOf(DESCRIPTION_END, start + DESCRIPTION_START.length);
+  if (start < 0 || end < 0) return [];
+  const block = description.slice(start + DESCRIPTION_START.length, end);
+  if (!/^Type: (movie|tv)$/m.test(block)) return [];
+  const line = block.match(/^Streaming: (.+)$/m);
+  return line ? line[1].split(", ").map((name) => name.trim()).filter(Boolean) : [];
+}
 const EXTERNAL_BUDGET_EXHAUSTED = "External API budget exhausted";
 const INVALID_API_KEY_PREFIX = "INVALID_API_KEY:";
 
@@ -556,9 +571,9 @@ async function tmdbLookup(
 async function tmdbStreamingProviders(
   classification: Classification,
   config: SecretsConfig
-): Promise<string[]> {
-  if (!config.tmdb?.apiKey || !classification.externalId) return [];
-  if (!["movie", "tv"].includes(classification.type)) return [];
+): Promise<string[] | null> {
+  if (!config.tmdb?.apiKey || !classification.externalId) return null;
+  if (!["movie", "tv"].includes(classification.type)) return null;
   const region = config.runtime?.streamingRegion || "US";
   const url = `https://api.themoviedb.org/3/${classification.type === "tv" ? "tv" : "movie"}/${classification.externalId}/watch/providers`;
   const res = await fetchWithBackoff(
@@ -566,8 +581,9 @@ async function tmdbStreamingProviders(
     { method: "GET", headers: tmdbHeaders(config) },
     { maxRetries: 3, baseDelayMs: 250, jitterMs: 250 }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return null;
   const data = await res.json().catch((): any => null);
+  if (!data?.results) return null;
   const regionInfo = data?.results?.[region];
   const providers = ([] as any[])
     .concat(regionInfo?.flatrate || [])
@@ -1103,7 +1119,8 @@ export const MediaGroomer = function () {
     ) {
       try {
         await spendExternalCallOrThrow();
-        enrichment.streamingProviders = await tmdbStreamingProviders(classification, config);
+        const providers = await tmdbStreamingProviders(classification, config);
+        if (providers) enrichment.streamingProviders = providers;
       } catch (e) {
         logger.info(`Streaming provider lookup skipped/failed for "${title}": ${String(e)}`);
       }
@@ -1224,12 +1241,27 @@ export const MediaGroomer = function () {
       source: "heuristic",
       evidence: "existing Trello media label",
     };
+    const enrichment: Enrichment = {
+      artworkUrl: classification.artworkUrl,
+      metadataUrl: classification.metadataUrl,
+    };
+    if (
+      fetchArtwork &&
+      config.runtime?.applyStreamingProviders !== false &&
+      classification.source === "tmdb" &&
+      classification.externalId
+    ) {
+      try {
+        await spendExternalCallOrThrow();
+        const providers = await tmdbStreamingProviders(classification, config);
+        if (providers) enrichment.streamingProviders = providers;
+      } catch (e) {
+        logger.info(`Streaming provider lookup skipped/failed for "${card.name}": ${String(e)}`);
+      }
+    }
     return {
       classification,
-      enrichment: {
-        artworkUrl: classification.artworkUrl,
-        metadataUrl: classification.metadataUrl,
-      },
+      enrichment,
       labelTypes,
       decidedAt: new Date().toISOString(),
     };
@@ -1391,6 +1423,52 @@ export const MediaGroomer = function () {
       .map((labelName) => labelName && mediaModel.getLabels()[labelName])
       .filter(Boolean);
 
+    async function syncStreamingLabels(
+      card: ICard,
+      providers: string[],
+      removeStale: boolean
+    ): Promise<number> {
+      const desiredNames = Array.from(new Set(providers.map(streamingLabelName)));
+      const desiredIds: string[] = [];
+      for (const name of desiredNames) {
+        desiredIds.push(await mediaController.ensureLabel(name, "blue"));
+      }
+      if (removeStale) {
+        for (const [name, id] of Object.entries(mediaModel.getLabels())) {
+          if (
+            name.startsWith(STREAMING_LABEL_PREFIX) &&
+            card.idLabels.includes(id) &&
+            !desiredIds.includes(id)
+          ) {
+            await mediaController.removeLabelFromCard(card.id, id);
+            card.idLabels = card.idLabels.filter((existingId) => existingId !== id);
+          }
+        }
+      }
+      let added = 0;
+      for (const id of desiredIds) {
+        if (!card.idLabels.includes(id)) {
+          await mediaController.addLabelToCard(card.id, id);
+          card.idLabels.push(id);
+          added++;
+        }
+      }
+      return added;
+    }
+
+    if (applyLabels && config.runtime?.applyStreamingProviders !== false) {
+      for (const card of cards) {
+        const existingProviders = streamingProvidersFromDescription(card.desc || "");
+        if (existingProviders.length) {
+          try {
+            labeled += await syncStreamingLabels(card, existingProviders, false);
+          } catch (e) {
+            logger.info(`Failed to backfill streaming labels for "${card.name}": ${String(e)}`);
+          }
+        }
+      }
+    }
+
     for (const card of cards) {
       if (considered >= maxCardsPerRun) break;
       if (!card?.name) continue;
@@ -1508,6 +1586,16 @@ export const MediaGroomer = function () {
               card.idLabels.push(labelId);
               labeled++;
             }
+          }
+          if (
+            config.runtime?.applyStreamingProviders !== false &&
+            entry.enrichment?.streamingProviders
+          ) {
+            labeled += await syncStreamingLabels(
+              card,
+              entry.enrichment.streamingProviders,
+              true
+            );
           }
         }
         let didEnrich = false;

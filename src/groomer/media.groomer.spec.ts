@@ -8,6 +8,8 @@ import {
   normalizeTitle,
   shouldFetchArtworkForLabeledCard,
   shouldMoveNewlyClassifiedCard,
+  streamingLabelName,
+  streamingProvidersFromDescription,
   typeToLabelName,
   typeToListName,
   upsertMediaDescriptionBlock,
@@ -161,6 +163,26 @@ describe("Media groomer", () => {
   });
 
   describe("descriptions", () => {
+    it("extracts streaming services only from managed movie and TV metadata", () => {
+      const description = upsertMediaDescriptionBlock(
+        "Streaming: Manual note",
+        { type: "movie", confidence: 0.93, source: "tmdb" },
+        { streamingProviders: ["Max", "Criterion Channel"] }
+      );
+      expect(streamingProvidersFromDescription(description)).to.deep.equal([
+        "Max",
+        "Criterion Channel",
+      ]);
+      expect(streamingLabelName(" Max ")).to.equal("Streaming: Max");
+      expect(streamingProvidersFromDescription("Streaming: Netflix")).to.deep.equal([]);
+      expect(
+        streamingProvidersFromDescription(
+          upsertMediaDescriptionBlock("", { type: "book", confidence: 1, source: "heuristic" },
+            { streamingProviders: ["Max"] })
+        )
+      ).to.deep.equal([]);
+    });
+
     it("appends a managed metadata block without removing manual text", () => {
       const result = upsertMediaDescriptionBlock(
         "manual notes",
