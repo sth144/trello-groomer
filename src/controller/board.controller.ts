@@ -1002,6 +1002,18 @@ export class BoardController<T extends BoardModel> {
     console.log(`Sorting Checklist: ${checklist}`);
     if (!checklist?.checkItems?.length) return;
 
+    const firstCompleteIndex = checklist.checkItems.findIndex(
+      (item: CheckItem) => item.state === "complete"
+    );
+    if (
+      firstCompleteIndex < 0 ||
+      checklist.checkItems
+        .slice(firstCompleteIndex)
+        .every((item: CheckItem) => item.state === "complete")
+    ) {
+      return;
+    }
+
     // 2. Partition items into incomplete and complete
     const incomplete = checklist.checkItems.filter(
       (i: CheckItem) => i.state === "incomplete"

@@ -4,6 +4,7 @@ import { CheckItem } from "@base/lib/checklist.interface";
 import { ICard } from "@base/lib/card.interface"; /** (Importing ICard) */
 
 const ITEM_TAG_PATTERN = /^\[(.*) item\]$/;
+const GENERATED_AGGREGATOR_DESCRIPTION = "Auto-generated from task-aggregator.ts,";
 
 export async function processTaskAggregatorItems(
   todoController: BoardController<ToDoBoardModel>
@@ -38,6 +39,8 @@ export async function processTaskAggregatorItems(
 
   console.log("Grouped Cards:");
   console.log(groupedCards);
+
+  const aggregatorCardIds = new Set<string>();
 
   for (const groupKey in groupedCards) {
     const cardsInGroup = groupedCards[groupKey];
@@ -135,19 +138,32 @@ export async function processTaskAggregatorItems(
         }
       }
 
-      /** sort target checklist */
-      console.log("Sorting checklist items");
-      await todoController.sortChecklistIncompleteFirst(
-        aggregatorCard.id,
-        targetChecklist.id
-      );
       console.log("Deduplicating checklist items");
       await todoController.deduplicateChecklistItems(targetChecklist.id);
     }
 
+    aggregatorCardIds.add(aggregatorCard.id);
+
     /** (Delete the original task cards) */
     for (const card of cardsInGroup) {
       await todoController.deleteCardByID(card.id);
+    }
+  }
+
+  // Existing generated aggregators still need sorting when no item cards arrive.
+  for (const card of allCards) {
+    if (
+      !card.dueComplete &&
+      (card.desc || "").startsWith(GENERATED_AGGREGATOR_DESCRIPTION)
+    ) {
+      aggregatorCardIds.add(card.id);
+    }
+  }
+
+  for (const cardId of Array.from(aggregatorCardIds)) {
+    const checklists = await todoController.getChecklistsForCardId(cardId);
+    for (const checklist of checklists) {
+      await todoController.sortChecklistIncompleteFirst(cardId, checklist.id);
     }
   }
 }
@@ -160,7 +176,7 @@ async function createNewTaskAggregatorFromTemplate(
   const newCard = await todoController.addCard(
     {
       name: domainName,
-      desc: `Auto-generated from task-aggregator.ts, domain ${domainName}`,
+      desc: `${GENERATED_AGGREGATOR_DESCRIPTION} domain ${domainName}`,
       idList: thisMonthListId,
       pos: "top",
     },
