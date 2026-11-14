@@ -35,6 +35,7 @@ export class AppComponent implements OnDestroy {
   error = signal<string | null>(null);
   /** check items with a write in flight */
   pending = signal<ReadonlySet<string>>(new Set());
+  reordering = signal<ReadonlySet<string>>(new Set());
   /**
    * states applied locally but not yet confirmed by Trello. An item renders from here while it
    * settles, but keeps its confirmed position in the list until the write lands.
@@ -121,18 +122,6 @@ export class AppComponent implements OnDestroy {
 
   isPending(item: ViewCheckItem): boolean {
     return this.pending().has(item.id);
-  }
-
-  /**
-   * items sorted the way the groomer sorts them — incomplete first. Ordering keys off the
-   * *confirmed* state, so a freshly ticked item strikes through in place and only drops to the
-   * bottom once Trello has accepted the write.
-   */
-  orderedItems(checklist: { checkItems: ViewCheckItem[] }): ViewCheckItem[] {
-    return [...checklist.checkItems].sort((a, b) => {
-      if (a.state === b.state) return 0;
-      return a.state === 'incomplete' ? -1 : 1;
-    });
   }
 
   completeCount(checklist: { checkItems: ViewCheckItem[] }): number {

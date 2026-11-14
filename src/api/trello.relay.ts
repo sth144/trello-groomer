@@ -2,6 +2,7 @@ import { TrelloHttpClient } from "../lib/http.client";
 import { CheckItem } from "../lib/checklist.interface";
 import { WriteOverlay } from "./write.overlay";
 import { logger } from "../lib/logger";
+import { moveCheckItem, PositionedItem } from "./checkitem.order";
 
 /*************************************************************************************************
  * Write side of the API. Every mutation is relayed to Trello (Trello stays the source of truth), *
@@ -159,6 +160,48 @@ export class TrelloRelay {
     };
     this.overlay.recordAdd(checklistId, created);
     return created;
+  }
+
+  public async reorderCheckItem(
+    cardId: string,
+    checklistId: string,
+    checkItemId: string,
+    direction: string
+  ): Promise<string[]> {
+    if (direction !== "up" && direction !== "down") {
+      throw new TrelloRelayError("direction must be up or down", 400);
+    }
+
+    const checklist = await withTimeout(
+      this.httpClient.asyncGet(`/checklists/${checklistId}?checkItems=all`),
+      `GET checklist ${checklistId}`
+    );
+    this.assertNotTrelloError(checklist, `get checklist ${checklistId}`);
+    if (!checklist || checklist.idCard !== cardId || !Array.isArray(checklist.checkItems)) {
+      throw new TrelloRelayError("checklist is not on this card", 404);
+    }
+    const items: PositionedItem[] = checklist.checkItems
+      .map((item: any) => ({ id: item.id, pos: item.pos }))
+      .sort((a: PositionedItem, b: PositionedItem) => a.pos - b.pos);
+    if (items.some((item) => !item.id || !Number.isFinite(item.pos))) {
+      throw new TrelloRelayError("Trello did not return checklist positions");
+    }
+
+    let move: { pos: number | "top" | "bottom"; ids: string[] };
+    try {
+      move = moveCheckItem(items, checkItemId, direction);
+    } catch (error) {
+      throw new TrelloRelayError((error as Error).message, 400);
+    }
+    const response = await withTimeout(
+      this.httpClient.asyncPut(`/cards/${cardId}/checkItem/${checkItemId}`, {
+        pos: move.pos,
+      }),
+      `PUT checkItem ${checkItemId} position`
+    );
+    this.assertNotTrelloError(response, `reorder check item ${checkItemId}`);
+    this.overlay.recordReorder(checklistId, move.ids);
+    return move.ids;
   }
 
   public async removeCheckItem(

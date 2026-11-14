@@ -90,4 +90,16 @@ export class ChecklistsService {
       { name },
     );
   }
+
+  reorderCheckItem(
+    cardId: string,
+    checklistId: string,
+    checkItemId: string,
+    direction: 'up' | 'down',
+  ): Observable<{ ids: string[] }> {
+    return this.http.put<{ ids: string[] }>(
+      `/api/cards/${cardId}/checklists/${checklistId}/checkItems/${checkItemId}/position`,
+      { direction },
+    );
+  }
 }

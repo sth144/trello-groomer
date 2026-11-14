@@ -90,7 +90,7 @@
                 <p class="empty">Nothing left here.</p>
               } @else {
                 <ul class="items">
-                  @for (item of orderedItems(checklist); track item.id) {
+                  @for (item of checklist.checkItems; track item.id) {
                     <li
                       class="item"
                       [class.item--done]="stateOf(item) === 'complete'"

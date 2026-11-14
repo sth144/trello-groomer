@@ -25,6 +25,11 @@ interface AddedEntry {
   at: number;
 }
 
+interface OrderEntry {
+  ids: string[];
+  at: number;
+}
+
 export class WriteOverlay {
   /** checkItemId -> most recent state we relayed */
   private states: Record<string, StateEntry> = {};
@@ -34,6 +39,8 @@ export class WriteOverlay {
   private added: Record<string, AddedEntry[]> = {};
   /** checkItemId -> when we deleted it */
   private removed: Record<string, number> = {};
+  /** checklistId -> most recent order accepted by Trello */
+  private orders: Record<string, OrderEntry> = {};
 
   constructor(private now: () => number = Date.now) {}
 
@@ -61,6 +68,10 @@ export class WriteOverlay {
         (entry) => entry.item.id !== checkItemId
       );
     }
+  }
+
+  public recordReorder(checklistId: string, ids: string[]): void {
+    this.orders[checklistId] = { ids: [...ids], at: this.now() };
   }
 
   /**
@@ -93,6 +104,15 @@ export class WriteOverlay {
        *  its pending edits have to win over what it was created with.
        */
       items.push(this.withPendingEdits(entry.item, capturedAtMs));
+    }
+
+    const order = this.orders[checklist.id];
+    if (order !== undefined && order.at > capturedAtMs) {
+      const positions = new Map(order.ids.map((id, index) => [id, index]));
+      items.sort((a, b) =>
+        (positions.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+        (positions.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      );
     }
 
     return {
@@ -150,6 +170,11 @@ export class WriteOverlay {
         this.added[checklistId] = survivors;
       }
     }
+    for (const checklistId of Object.keys(this.orders)) {
+      if (this.orders[checklistId].at <= capturedAtMs) {
+        delete this.orders[checklistId];
+      }
+    }
   }
 
   public get size(): number {
@@ -158,6 +183,7 @@ export class WriteOverlay {
       Object.keys(this.names).length +
       Object.keys(this.removed).length +
       Object.keys(this.added).length
+      + Object.keys(this.orders).length
     );
   }
 }

@@ -402,6 +402,23 @@ export function createApiServer(options: ApiServerOptions) {
     }
   );
 
+  app.put(
+    "/api/cards/:cardId/checklists/:checklistId/checkItems/:checkItemId/position",
+    async (req: ApiRequest, res: ApiResponse) => {
+      try {
+        const ids = await relay.reorderCheckItem(
+          req.params.cardId,
+          req.params.checklistId,
+          req.params.checkItemId,
+          (req.body || {}).direction
+        );
+        res.json({ ids });
+      } catch (e) {
+        handleWriteError(e, res);
+      }
+    }
+  );
+
   /********************************* static client ***********************************/
 
   if (existsSync(clientDir)) {

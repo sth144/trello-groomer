@@ -33,6 +33,16 @@ describe("WriteOverlay", () => {
     ]);
   });
 
+  it("applies a pending Trello reorder until a newer snapshot arrives", () => {
+    const overlay = overlayAt("2026-08-01T12:05:00.000Z");
+    overlay.recordReorder("checklist-1", ["item-2", "item-1"]);
+
+    expect(overlay.apply(checklist(), SNAPSHOT_AT).checkItems.map((item) => item.id))
+      .to.deep.equal(["item-2", "item-1"]);
+    overlay.prune(new Date("2026-08-01T12:06:00.000Z"));
+    expect(overlay.size).to.equal(0);
+  });
+
   it("applies a state change made after the snapshot was captured", () => {
     const overlay = overlayAt("2026-08-01T12:05:00.000Z");
     overlay.recordStateChange("item-1", "complete");
